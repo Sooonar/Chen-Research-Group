@@ -39,10 +39,16 @@ chen-group-website/
 │   │   │   └── [id]/page.tsx  # 新闻详情
 │   │   ├── algorithms/        # 算法资源页面
 │   │   ├── profile/           # 个人中心
+│   │   │   ├── page.tsx       # 个人资料
+│   │   │   └── submissions/   # 我的成果
+│   │   │       ├── page.tsx   # 成果列表
+│   │   │       └── new/       # 提交新成果
 │   │   ├── admin/             # 管理后台
 │   │   │   ├── page.tsx       # 后台首页
 │   │   │   ├── login/         # 登录
 │   │   │   ├── register/      # 注册
+│   │   │   ├── users/         # 用户审核
+│   │   │   ├── submissions/   # 成果审核
 │   │   │   ├── members/       # 成员管理
 │   │   │   ├── papers/        # 论文管理
 │   │   │   ├── patents/       # 专利管理
@@ -55,6 +61,8 @@ chen-group-website/
 │   │   └── api/               # API 路由
 │   │       ├── auth/          # 认证 API
 │   │       ├── user/          # 用户 API
+│   │       ├── users/         # 用户管理 API
+│   │       ├── submissions/   # 成果提交 API
 │   │       ├── members/       # 成员 API
 │   │       ├── papers/        # 论文 API
 │   │       ├── patents/       # 专利 API
@@ -191,7 +199,6 @@ enum UserStatus {
 
 enum MemberTitle {
   TEACHER      // 老师
-  PHD          // 博士生
   MASTER       // 硕士生
   ALUMNI       // 已毕业
 }
@@ -209,6 +216,23 @@ enum NewsCategory {
 }
 ```
 
+### Member 模型字段
+
+| 字段              | 类型        | 说明                                  |
+| ----------------- | ----------- | ------------------------------------- |
+| `id`            | String      | 主键                                  |
+| `userId`        | String?     | 关联用户 ID                           |
+| `name`          | String      | 姓名                                  |
+| `title`         | MemberTitle | 职称（TEACHER/MASTER/ALUMNI）         |
+| `grade`         | Int?        | 年级（1=研一, 2=研二, 3=研三，仅硕士生） |
+| `researchDirection` | String?   | 研究方向                              |
+| `bio`           | String?     | 个人简介                              |
+| `email`         | String?     | 邮箱                                  |
+| `avatarUrl`     | String?     | 头像 URL                              |
+| `displayOrder`  | Int         | 排序权重                              |
+| `isGraduated`   | Boolean     | 是否已毕业                            |
+| `graduationYear`| Int?        | 毕业年份                              |
+
 ## API 路由
 
 ### 认证
@@ -220,16 +244,33 @@ enum NewsCategory {
 
 ### 用户
 
-| 方法 | 路径                  | 说明                 |
-| ---- | --------------------- | -------------------- |
-| GET  | `/api/user/profile` | 获取当前登录用户信息 |
-| PUT  | `/api/user/profile` | 更新当前用户信息     |
+| 方法 | 路径                  | 说明                   |
+| ---- | --------------------- | ---------------------- |
+| GET  | `/api/user/profile` | 获取当前登录用户信息   |
+| PUT  | `/api/user/profile` | 更新当前用户信息（含成员信息） |
+
+### 用户管理（管理员）
+
+| 方法   | 路径              | 说明                   |
+| ------ | ----------------- | ---------------------- |
+| GET    | `/api/users`     | 获取用户列表           |
+| PUT    | `/api/users/[id]` | 审核用户/修改角色      |
+| DELETE | `/api/users/[id]` | 删除用户               |
+
+### 成果提交
+
+| 方法   | 路径                     | 说明                   |
+| ------ | ------------------------ | ---------------------- |
+| GET    | `/api/submissions`      | 获取提交列表           |
+| POST   | `/api/submissions`      | 提交新成果             |
+| PUT    | `/api/submissions/[id]` | 审核提交（通过/拒绝）  |
+| DELETE | `/api/submissions/[id]` | 删除提交               |
 
 ### 成员
 
 | 方法   | 路径                  | 说明         |
 | ------ | --------------------- | ------------ |
-| GET    | `/api/members`      | 获取成员列表 |
+| GET    | `/api/members`      | 获取成员列表（自动排序） |
 | POST   | `/api/members`      | 创建成员     |
 | GET    | `/api/members/[id]` | 获取单个成员 |
 | PUT    | `/api/members/[id]` | 更新成员     |
@@ -329,39 +370,43 @@ enum NewsCategory {
 | `/news/[id]`     | 新闻详情                     |
 | `/algorithms`    | 算法资源                     |
 | `/profile`       | 个人中心（需登录）           |
+| `/profile/submissions`     | 我的成果           |
+| `/profile/submissions/new` | 提交新成果         |
 
 ### 管理后台
 
-| 路径                            | 说明     |
-| ------------------------------- | -------- |
-| `/admin/login`                | 登录     |
-| `/admin/register`             | 注册     |
-| `/admin`                      | 后台首页 |
-| `/admin/members`              | 成员管理 |
-| `/admin/members/new`          | 添加成员 |
-| `/admin/members/[id]/edit`    | 编辑成员 |
-| `/admin/papers`               | 论文管理 |
-| `/admin/papers/new`           | 添加论文 |
-| `/admin/papers/[id]/edit`     | 编辑论文 |
-| `/admin/patents`              | 专利管理 |
-| `/admin/patents/new`          | 添加专利 |
-| `/admin/patents/[id]/edit`    | 编辑专利 |
-| `/admin/copyrights`           | 软著管理 |
-| `/admin/copyrights/new`       | 添加软著 |
-| `/admin/copyrights/[id]/edit` | 编辑软著 |
-| `/admin/awards`               | 获奖管理 |
-| `/admin/awards/new`           | 添加获奖 |
-| `/admin/awards/[id]/edit`     | 编辑获奖 |
-| `/admin/projects`             | 项目管理 |
-| `/admin/projects/new`         | 添加项目 |
-| `/admin/projects/[id]/edit`   | 编辑项目 |
-| `/admin/news`                 | 新闻管理 |
-| `/admin/news/new`             | 发布新闻 |
-| `/admin/news/[id]/edit`       | 编辑新闻 |
-| `/admin/algorithms`           | 算法管理 |
-| `/admin/algorithms/new`       | 添加算法 |
-| `/admin/algorithms/[id]/edit` | 编辑算法 |
-| `/admin/settings`             | 网站设置 |
+| 路径                              | 说明         |
+| --------------------------------- | ------------ |
+| `/admin/login`                  | 登录         |
+| `/admin/register`               | 注册         |
+| `/admin`                        | 后台首页     |
+| `/admin/users`                  | 用户审核     |
+| `/admin/submissions`            | 成果审核     |
+| `/admin/members`                | 成员管理     |
+| `/admin/members/new`            | 添加成员     |
+| `/admin/members/[id]/edit`      | 编辑成员     |
+| `/admin/papers`                 | 论文管理     |
+| `/admin/papers/new`             | 添加论文     |
+| `/admin/papers/[id]/edit`       | 编辑论文     |
+| `/admin/patents`                | 专利管理     |
+| `/admin/patents/new`            | 添加专利     |
+| `/admin/patents/[id]/edit`      | 编辑专利     |
+| `/admin/copyrights`             | 软著管理     |
+| `/admin/copyrights/new`         | 添加软著     |
+| `/admin/copyrights/[id]/edit`   | 编辑软著     |
+| `/admin/awards`                 | 获奖管理     |
+| `/admin/awards/new`             | 添加获奖     |
+| `/admin/awards/[id]/edit`       | 编辑获奖     |
+| `/admin/projects`               | 项目管理     |
+| `/admin/projects/new`           | 添加项目     |
+| `/admin/projects/[id]/edit`     | 编辑项目     |
+| `/admin/news`                   | 新闻管理     |
+| `/admin/news/new`               | 发布新闻     |
+| `/admin/news/[id]/edit`         | 编辑新闻     |
+| `/admin/algorithms`             | 算法管理     |
+| `/admin/algorithms/new`         | 添加算法     |
+| `/admin/algorithms/[id]/edit`   | 编辑算法     |
+| `/admin/settings`               | 网站设置     |
 
 ## 认证与权限
 
@@ -383,9 +428,26 @@ enum NewsCategory {
 ### 注册流程
 
 1. 用户访问 `/admin/register` 注册
-2. 默认状态为 `PENDING`（待审核）
-3. 超级管理员在后台审核通过
-4. 用户可登录系统
+2. 选择身份（老师/硕士生）和年级（研一/研二/研三）
+3. 默认状态为 `PENDING`（待审核）
+4. 管理员在「用户审核」页面审核通过
+5. **系统自动创建成员记录**，同步用户信息
+6. 用户登录后可在「个人中心」编辑成员信息
+
+### 成果提交流程
+
+1. 用户在「个人中心」→「我的成果」→「提交新成果」
+2. 选择成果类型（论文/专利/软著/获奖）
+3. 填写表单提交
+4. 管理员在「成果审核」页面审核
+5. 审核通过后成果显示在网站上
+
+### 成员排序规则
+
+成员列表按以下规则排序：
+1. **老师** 排最前
+2. **硕士生** 按年级排序：研三 > 研二 > 研一
+3. **已毕业** 排最后
 
 ### 首次部署
 
@@ -508,17 +570,22 @@ npx prisma generate       # 重新生成客户端
 
 ## 已完成功能
 
-- [X] 首页展示（课题组简介、团队卡片、成果统计、招生信息）
-- [X] 成员管理（CRUD、头像、分类筛选）
-- [X] 科研成果（论文、专利、软著、获奖）
-- [X] 科研项目（项目列表、详情、进展时间线、成果关联）
-- [X] 新闻动态（分类筛选、富文本内容）
-- [X] 算法资源（展示、下载、使用说明）
-- [X] 管理后台（全部模块的 CRUD 操作）
-- [X] 成员注册审核机制
-- [X] 角色权限系统（超级管理员/管理员/普通成员）
-- [X] 个人中心（查看/编辑个人信息、查看提交状态）
-- [X] 导航栏权限控制（根据角色显示/隐藏后台入口）
+- [x] 首页展示（课题组简介、团队卡片、成果统计、招生信息）
+- [x] 成员管理（CRUD、头像、分类筛选、自动排序）
+- [x] 科研成果（论文、专利、软著、获奖）
+- [x] 科研项目（项目列表、详情、进展时间线、成果关联）
+- [x] 新闻动态（分类筛选、富文本内容）
+- [x] 算法资源（展示、下载、使用说明）
+- [x] 管理后台（全部模块的 CRUD 操作）
+- [x] 用户注册审核机制（选择身份和年级）
+- [x] 审核通过自动创建成员记录
+- [x] 角色权限系统（超级管理员/管理员/普通成员）
+- [x] 个人中心（查看/编辑个人信息、成员信息）
+- [x] 导航栏权限控制（根据角色显示/隐藏后台入口）
+- [x] 成员自主成果提交 + 审核流程
+- [x] 用户审核管理
+- [x] 成果审核管理
+- [x] 成员排序（老师 > 研三 > 研二 > 研一）
 
 ## 待完成功能
 
@@ -528,7 +595,6 @@ npx prisma generate       # 重新生成客户端
 - [ ] 富文本编辑器集成
 - [ ] 数据可视化图表
 - [ ] 响应式优化
-- [ ] 成员自主成果录入 + 审核流程
 
 ## 常见问题
 
