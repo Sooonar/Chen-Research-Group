@@ -8,16 +8,30 @@ interface Member {
   id: string;
   name: string;
   title: string;
+  grade: number | null;
   researchDirection: string | null;
   avatarUrl: string | null;
 }
 
 const titleMap: Record<string, string> = {
   TEACHER: "老师",
-  PHD: "博士生",
   MASTER: "硕士生",
   ALUMNI: "已毕业",
 };
+
+const gradeMap: Record<number, string> = {
+  1: "研一",
+  2: "研二",
+  3: "研三",
+};
+
+function getMemberTitle(member: Member): string {
+  const title = titleMap[member.title] || member.title;
+  if (member.title === "MASTER" && member.grade) {
+    return `${title} (${gradeMap[member.grade] || `研${member.grade}`})`;
+  }
+  return title;
+}
 
 export function TeamPreview() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -93,7 +107,7 @@ export function TeamPreview() {
                       {member.name}
                     </h3>
                     <p className="text-sm text-blue-400 text-center mb-2">
-                      {titleMap[member.title] || member.title}
+                      {getMemberTitle(member)}
                     </p>
                     <p className="text-sm text-gray-400 text-center">
                       {member.researchDirection}

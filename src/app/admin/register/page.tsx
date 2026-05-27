@@ -12,6 +12,8 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     studentId: "",
+    title: "MASTER",
+    grade: "1",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -39,6 +41,8 @@ export default function RegisterPage() {
           email: form.email,
           password: form.password,
           studentId: form.studentId,
+          title: form.title,
+          grade: form.title === "MASTER" ? parseInt(form.grade) : null,
         }),
       });
 
@@ -84,6 +88,37 @@ export default function RegisterPage() {
               required
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              身份 <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            >
+              <option value="TEACHER">老师</option>
+              <option value="MASTER">硕士生</option>
+            </select>
+          </div>
+
+          {form.title === "MASTER" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                年级 <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={form.grade}
+                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              >
+                <option value="1">研一</option>
+                <option value="2">研二</option>
+                <option value="3">研三</option>
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">

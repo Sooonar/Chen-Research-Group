@@ -32,9 +32,35 @@ export async function PUT(
       return NextResponse.json({ error: "只有超级管理员可以修改角色" }, { status: 403 });
     }
 
+    // 获取要更新的用户信息
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      include: { member: true },
+    });
+
+    if (!targetUser) {
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+    }
+
     const updateData: any = {};
     if (status) updateData.status = status;
     if (role) updateData.role = role;
+
+    // 如果状态变为通过，且没有成员记录，则自动创建
+    if (status === "APPROVED" && !targetUser.member) {
+      const memberTitle = targetUser.title || "MASTER";
+      
+      await prisma.member.create({
+        data: {
+          userId: id,
+          name: targetUser.name,
+          title: memberTitle,
+          grade: memberTitle === "MASTER" ? targetUser.grade : null,
+          email: targetUser.email,
+          displayOrder: memberTitle === "TEACHER" ? 0 : (targetUser.grade || 1) * 10,
+        },
+      });
+    }
 
     const user = await prisma.user.update({
       where: { id },
@@ -44,6 +70,8 @@ export async function PUT(
         name: true,
         email: true,
         studentId: true,
+        title: true,
+        grade: true,
         role: true,
         status: true,
         createdAt: true,
