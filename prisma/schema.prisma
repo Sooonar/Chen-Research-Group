@@ -20,6 +20,8 @@ model User {
   password       String
   role           Role      @default(MEMBER)
   status         UserStatus @default(PENDING)   // 注册审核状态
+  title          MemberTitle?  // 注册时选择的身份
+  grade          Int?         // 年级（仅硕士生）
   avatarUrl      String?   @map("avatar_url")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -53,6 +55,7 @@ model Member {
   userId            String?   @unique @map("user_id")
   name              String
   title             MemberTitle
+  grade             Int?      // 年级：1=研一, 2=研二, 3=研三（仅硕士生）
   researchDirection String?   @map("research_direction")
   bio               String?   @db.Text
   email             String?
@@ -73,7 +76,6 @@ model Member {
 
 enum MemberTitle {
   TEACHER    // 老师
-  PHD        // 博士生
   MASTER     // 硕士生
   ALUMNI     // 已毕业
 }

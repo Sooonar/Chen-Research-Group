@@ -10,6 +10,7 @@ interface Member {
   id: string;
   name: string;
   title: string;
+  grade: number | null;
   researchDirection: string | null;
   bio: string | null;
   email: string | null;
@@ -25,6 +26,7 @@ const placeholderMembers: Member[] = [
     id: "1",
     name: "陈老师",
     title: "TEACHER",
+    grade: null,
     researchDirection: "人工智能、机器学习、深度学习",
     bio: "硕士生导师，长期从事人工智能领域的研究工作",
     email: "chen@example.com",
@@ -37,6 +39,7 @@ const placeholderMembers: Member[] = [
     id: "2",
     name: "张同学",
     title: "MASTER",
+    grade: 2,
     researchDirection: "计算机视觉、目标检测",
     bio: "硕士二年级，研究方向为计算机视觉",
     email: "zhang@example.com",
@@ -49,6 +52,7 @@ const placeholderMembers: Member[] = [
     id: "3",
     name: "李同学",
     title: "MASTER",
+    grade: 1,
     researchDirection: "自然语言处理",
     bio: "硕士一年级，研究方向为NLP",
     email: "li@example.com",
@@ -61,10 +65,23 @@ const placeholderMembers: Member[] = [
 
 const titleMap: Record<string, string> = {
   TEACHER: "老师",
-  PHD: "博士生",
   MASTER: "硕士生",
   ALUMNI: "已毕业",
 };
+
+const gradeMap: Record<number, string> = {
+  1: "研一",
+  2: "研二",
+  3: "研三",
+};
+
+function getMemberTitle(member: Member): string {
+  const title = titleMap[member.title] || member.title;
+  if (member.title === "MASTER" && member.grade) {
+    return `${title} (${gradeMap[member.grade] || `研${member.grade}`})`;
+  }
+  return title;
+}
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -78,8 +95,6 @@ export default function MembersPage() {
         if (res.ok) {
           const data = await res.json();
           setMembers(data.length > 0 ? data : placeholderMembers);
-        } else {
-          setMembers(placeholderMembers);
         }
       } catch {
         setMembers(placeholderMembers);
@@ -173,7 +188,7 @@ export default function MembersPage() {
                             {member.name}
                           </h3>
                           <p className="text-sm text-blue-400 mb-2">
-                            {titleMap[member.title] || member.title}
+                            {getMemberTitle(member)}
                           </p>
                           <p className="text-sm text-gray-400 line-clamp-2">
                             {member.researchDirection}

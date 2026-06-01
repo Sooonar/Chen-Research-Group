@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { User, Mail, CreditCard, Shield, Clock, FileText, Plus } from "lucide-react";
+import { User, Mail, CreditCard, Shield, Clock, FileText, Plus, BookOpen } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 
@@ -13,6 +13,8 @@ interface UserProfile {
   name: string;
   email: string;
   studentId: string | null;
+  title: string | null;
+  grade: number | null;
   role: string;
   status: string;
   createdAt: string;
@@ -20,6 +22,7 @@ interface UserProfile {
     id: string;
     name: string;
     title: string;
+    grade: number | null;
     researchDirection: string | null;
     bio: string | null;
   } | null;
@@ -49,17 +52,16 @@ const statusColorMap: Record<string, string> = {
   REJECTED: "bg-red-500/20 text-red-400",
 };
 
-const submissionTypeMap: Record<string, string> = {
-  PUBLICATION: "论文",
-  PATENT: "专利",
-  COPYRIGHT: "软著",
-  AWARD: "获奖",
+const titleMap: Record<string, string> = {
+  TEACHER: "老师",
+  MASTER: "硕士生",
+  ALUMNI: "已毕业",
 };
 
-const submissionStatusMap: Record<string, string> = {
-  PENDING: "待审核",
-  APPROVED: "已通过",
-  REJECTED: "已拒绝",
+const gradeMap: Record<number, string> = {
+  1: "研一",
+  2: "研二",
+  3: "研三",
 };
 
 export default function ProfilePage() {
@@ -67,9 +69,18 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editingMember, setEditingMember] = useState(false);
   const [form, setForm] = useState({
     name: "",
     studentId: "",
+    title: "",
+    grade: "",
+  });
+  const [memberForm, setMemberForm] = useState({
+    title: "",
+    grade: "",
+    researchDirection: "",
+    bio: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -83,6 +94,14 @@ export default function ProfilePage() {
           setForm({
             name: data.name || "",
             studentId: data.studentId || "",
+            title: data.title || "MASTER",
+            grade: data.grade?.toString() || "1",
+          });
+          setMemberForm({
+            title: data.member?.title || data.title || "MASTER",
+            grade: (data.member?.grade || data.grade)?.toString() || "1",
+            researchDirection: data.member?.researchDirection || "",
+            bio: data.member?.bio || "",
           });
         }
       } catch (error) {
@@ -117,6 +136,35 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error saving profile:", error);
+      alert("保存失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMemberSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile?.name,
+          studentId: profile?.studentId,
+          ...memberForm,
+          grade: memberForm.grade ? parseInt(memberForm.grade) : null,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        setEditingMember(false);
+      } else {
+        alert("保存失败");
+      }
+    } catch (error) {
+      console.error("Error saving member info:", error);
       alert("保存失败");
     } finally {
       setSaving(false);
@@ -272,6 +320,31 @@ export default function ProfilePage() {
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">身份</label>
+                      <select
+                        value={form.title}
+                        onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                      >
+                        <option value="TEACHER">老师</option>
+                        <option value="MASTER">硕士生</option>
+                      </select>
+                    </div>
+                    {form.title === "MASTER" && (
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">年级</label>
+                        <select
+                          value={form.grade}
+                          onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                        >
+                          <option value="1">研一</option>
+                          <option value="2">研二</option>
+                          <option value="3">研三</option>
+                        </select>
+                      </div>
+                    )}
                     <div className="flex gap-3">
                       <button
                         onClick={handleSave}
@@ -286,6 +359,8 @@ export default function ProfilePage() {
                           setForm({
                             name: profile.name || "",
                             studentId: profile.studentId || "",
+                            title: profile.title || "MASTER",
+                            grade: profile.grade?.toString() || "1",
                           });
                         }}
                         className="px-4 py-2 border border-white/20 hover:bg-white/10 text-white rounded-lg transition-colors"
@@ -313,8 +388,15 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Shield className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-400 w-20">角色</span>
-                      <span>{roleMap[profile.role] || profile.role}</span>
+                      <span className="text-gray-400 w-20">身份</span>
+                      <span>
+                        {titleMap[profile.title || ""] || "-"}
+                        {profile.title === "MASTER" && profile.grade && (
+                          <span className="ml-2 text-gray-400">
+                            ({gradeMap[profile.grade] || `研${profile.grade}`})
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-gray-500" />
@@ -327,66 +409,126 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* 关联成员信息 */}
-              {profile.member && (
+              {/* 成员信息（已审核用户可见） */}
+              {profile.status === "APPROVED" && (
                 <div className="glass-card p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-purple-400" />
-                    成员信息
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-400 w-20">职称</span>
-                      <span>{profile.member.title}</span>
-                    </div>
-                    {profile.member.researchDirection && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-400 w-20">研究方向</span>
-                        <span>{profile.member.researchDirection}</span>
-                      </div>
-                    )}
-                    {profile.member.bio && (
-                      <div>
-                        <p className="text-gray-400 mb-1">个人简介</p>
-                        <p className="text-gray-300">{profile.member.bio}</p>
-                      </div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-purple-400" />
+                      成员信息
+                    </h3>
+                    {!editingMember && (
+                      <button
+                        onClick={() => setEditingMember(true)}
+                        className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        编辑
+                      </button>
                     )}
                   </div>
-                </div>
-              )}
 
-              {/* 我的提交 */}
-              {profile.submissions.length > 0 && (
-                <div className="glass-card p-6">
-                  <h3 className="text-lg font-semibold mb-4">我的提交</h3>
-                  <div className="space-y-3">
-                    {profile.submissions.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="flex items-center justify-between p-3 bg-white/5 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-400">
-                            {submissionTypeMap[sub.type] || sub.type}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(sub.createdAt).toLocaleDateString("zh-CN")}
-                          </span>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            sub.status === "APPROVED"
-                              ? "bg-green-500/20 text-green-400"
-                              : sub.status === "REJECTED"
-                              ? "bg-red-500/20 text-red-400"
-                              : "bg-yellow-500/20 text-yellow-400"
-                          }`}
+                  {editingMember ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">职称</label>
+                        <select
+                          value={memberForm.title}
+                          onChange={(e) => setMemberForm({ ...memberForm, title: e.target.value })}
+                          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                         >
-                          {submissionStatusMap[sub.status] || sub.status}
+                          <option value="TEACHER">老师</option>
+                          <option value="MASTER">硕士生</option>
+                        </select>
+                      </div>
+                      {memberForm.title === "MASTER" && (
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">年级</label>
+                          <select
+                            value={memberForm.grade}
+                            onChange={(e) => setMemberForm({ ...memberForm, grade: e.target.value })}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          >
+                            <option value="1">研一</option>
+                            <option value="2">研二</option>
+                            <option value="3">研三</option>
+                          </select>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">研究方向</label>
+                        <input
+                          type="text"
+                          value={memberForm.researchDirection}
+                          onChange={(e) => setMemberForm({ ...memberForm, researchDirection: e.target.value })}
+                          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          placeholder="例如：人工智能、计算机视觉"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">个人简介</label>
+                        <textarea
+                          value={memberForm.bio}
+                          onChange={(e) => setMemberForm({ ...memberForm, bio: e.target.value })}
+                          rows={4}
+                          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white resize-none"
+                          placeholder="介绍一下自己的研究方向和兴趣"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleMemberSave}
+                          disabled={saving}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg transition-colors"
+                        >
+                          {saving ? "保存中..." : "保存"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingMember(false);
+                            setMemberForm({
+                              title: profile.member?.title || profile.title || "MASTER",
+                              grade: (profile.member?.grade || profile.grade)?.toString() || "1",
+                              researchDirection: profile.member?.researchDirection || "",
+                              bio: profile.member?.bio || "",
+                            });
+                          }}
+                          className="px-4 py-2 border border-white/20 hover:bg-white/10 text-white rounded-lg transition-colors"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-400 w-20">职称</span>
+                        <span>
+                          {titleMap[profile.member?.title || profile.title || ""] || "-"}
+                          {(profile.member?.title === "MASTER" || profile.title === "MASTER") && 
+                           (profile.member?.grade || profile.grade) && (
+                            <span className="ml-2 text-gray-400">
+                              ({gradeMap[profile.member?.grade || profile.grade || 1] || ""})
+                            </span>
+                          )}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                      {profile.member?.researchDirection && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 w-20">研究方向</span>
+                          <span>{profile.member.researchDirection}</span>
+                        </div>
+                      )}
+                      {profile.member?.bio && (
+                        <div>
+                          <p className="text-gray-400 mb-1">个人简介</p>
+                          <p className="text-gray-300">{profile.member.bio}</p>
+                        </div>
+                      )}
+                      {!profile.member?.researchDirection && !profile.member?.bio && (
+                        <p className="text-gray-500 text-sm">暂未填写成员信息，点击编辑完善个人资料</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -400,7 +542,7 @@ export default function ProfilePage() {
                     <div>
                       <h3 className="font-semibold text-yellow-400">账号审核中</h3>
                       <p className="text-sm text-gray-400">
-                        您的账号正在等待管理员审核，审核通过后即可正常使用。
+                        您的账号正在等待管理员审核，审核通过后即可完善成员信息和提交成果。
                       </p>
                     </div>
                   </div>
