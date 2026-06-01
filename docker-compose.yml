@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: chen-group-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"

@@ -3,7 +3,15 @@
 import { motion } from "framer-motion";
 import { Mail, GraduationCap } from "lucide-react";
 
-export function AdmissionSection() {
+interface AdmissionSectionProps {
+  admissionInfo: string;
+  contactEmail: string;
+}
+
+export function AdmissionSection({
+  admissionInfo,
+  contactEmail,
+}: AdmissionSectionProps) {
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,9 +33,7 @@ export function AdmissionSection() {
                 <span className="gradient-text">招生信息</span>
               </h2>
               <p className="text-gray-300 mb-6 leading-relaxed">
-                课题组常年招收对科研充满热情的博士研究生和硕士研究生。
-                我们提供良好的科研环境、充足的研究经费和丰富的学术交流机会。
-                欢迎具有计算机科学、人工智能、数学等相关背景的同学加入我们。
+                {admissionInfo}
               </p>
               <div className="space-y-3 mb-6">
                 <h3 className="text-lg font-semibold text-white">招生要求：</h3>
@@ -40,7 +46,7 @@ export function AdmissionSection() {
               </div>
               <div className="flex items-center gap-4">
                 <a
-                  href="mailto:contact@example.com"
+                  href={`mailto:${contactEmail}`}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
                 >
                   <Mail className="w-4 h-4" />
