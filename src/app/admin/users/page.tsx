@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, X, Shield, Trash2, UserCheck, UserX } from "lucide-react";
+import { ArrowLeft, Check, X, Shield, Trash2, UserCheck, UserX, RefreshCw } from "lucide-react";
 
 interface User {
   id: string;
@@ -41,6 +41,7 @@ const statusColorMap: Record<string, string> = {
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -138,6 +139,27 @@ export default function UsersManagementPage() {
     }
   }
 
+  async function handleSync() {
+    if (!confirm("确定要为所有已审核用户创建成员记录吗？")) return;
+
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/users/sync", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message);
+      } else {
+        const data = await res.json();
+        alert(data.error || "同步失败");
+      }
+    } catch (error) {
+      console.error("Error syncing users:", error);
+      alert("同步失败");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const filteredUsers =
     filter === "all"
       ? users
@@ -168,6 +190,14 @@ export default function UsersManagementPage() {
               </p>
             </div>
           </div>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 disabled:bg-white/5 disabled:opacity-50 text-white rounded-lg transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "同步中..." : "同步成员"}
+          </button>
         </div>
 
         {/* Filter buttons */}
