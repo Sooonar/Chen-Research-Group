@@ -2,7 +2,13 @@
 
 import { motion } from "framer-motion";
 
-export function HeroSection() {
+interface HeroSectionProps {
+  name: string;
+  subtitle: string;
+  description: string;
+}
+
+export function HeroSection({ name, subtitle, description }: HeroSectionProps) {
   return (
     <section className="relative py-20 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,15 +19,13 @@ export function HeroSection() {
           className="text-center"
         >
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="gradient-text">陈老师课题组</span>
+            <span className="gradient-text">{name}</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            致力于前沿科学研究，推动技术创新与突破
+            {subtitle}
           </p>
           <p className="text-gray-400 max-w-2xl mx-auto mb-10">
-            我们专注于人工智能、机器学习、计算机视觉等领域的研究工作，
-            在顶级期刊和会议上发表了多篇高水平论文，
-            培养了一批优秀的研究生人才。
+            {description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
