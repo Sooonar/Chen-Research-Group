@@ -7,6 +7,7 @@ import Link from "next/link";
 import { User, Mail, CreditCard, Shield, Clock, FileText, Plus, BookOpen } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { AvatarUpload } from "@/components/upload/avatar-upload";
 
 interface UserProfile {
   id: string;
@@ -17,6 +18,7 @@ interface UserProfile {
   grade: number | null;
   role: string;
   status: string;
+  avatarUrl: string | null;
   createdAt: string;
   member: {
     id: string;
@@ -25,6 +27,7 @@ interface UserProfile {
     grade: number | null;
     researchDirection: string | null;
     bio: string | null;
+    avatarUrl: string | null;
   } | null;
   submissions: Array<{
     id: string;
@@ -240,8 +243,14 @@ export default function ProfilePage() {
               className="md:col-span-1"
             >
               <div className="glass-card p-6 text-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mx-auto mb-4 flex items-center justify-center text-3xl font-bold text-white">
-                  {profile.name[0]}
+                <div className="mx-auto mb-4">
+                  <AvatarUpload
+                    currentAvatar={profile.avatarUrl || profile.member?.avatarUrl}
+                    name={profile.name}
+                    onUploadSuccess={(url) => {
+                      setProfile({ ...profile, avatarUrl: url });
+                    }}
+                  />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">{profile.name}</h2>
                 <p className="text-gray-400 text-sm mb-4">{profile.email}</p>

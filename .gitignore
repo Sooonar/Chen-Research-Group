@@ -37,6 +37,9 @@ yarn-error.log*
 # database
 database-setup.sql
 
+# uploads
+/public/uploads/
+
 # vercel
 .vercel
 
