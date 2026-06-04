@@ -4,6 +4,12 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// 邮箱格式验证
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email);
+}
+
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma) as any,
   providers: [
@@ -18,8 +24,15 @@ const handler = NextAuth({
           return null;
         }
 
+        // 验证邮箱格式
+        const email = credentials.email.toLowerCase().trim();
+        if (!validateEmail(email)) {
+          return null;
+        }
+
+        // 使用参数化查询（Prisma自动防止SQL注入）
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
         });
 
         if (!user || user.status !== "APPROVED") {
@@ -46,6 +59,7 @@ const handler = NextAuth({
   ],
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24小时过期
   },
   callbacks: {
     async jwt({ token, user }) {
