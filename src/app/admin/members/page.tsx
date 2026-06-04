@@ -10,6 +10,7 @@ interface Member {
   title: string;
   researchDirection: string | null;
   email: string | null;
+  avatarUrl: string | null;
   displayOrder: number;
 }
 
@@ -112,8 +113,16 @@ export default function MembersManagementPage() {
                   <tr key={member.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">
-                          {member.name[0]}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold overflow-hidden">
+                          {member.avatarUrl ? (
+                            <img
+                              src={member.avatarUrl}
+                              alt={member.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            member.name[0]
+                          )}
                         </div>
                         <span className="font-medium">{member.name}</span>
                       </div>

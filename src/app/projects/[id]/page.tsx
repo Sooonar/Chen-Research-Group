@@ -23,6 +23,7 @@ interface Project {
       id: string;
       name: string;
       title: string;
+      avatarUrl: string | null;
     };
     role: string | null;
   }>;
@@ -212,8 +213,16 @@ export default function ProjectDetailPage() {
                       key={pm.member.id}
                       className="flex items-center gap-3 p-3 bg-white/5 rounded-lg"
                     >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">
-                        {pm.member.name[0]}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold overflow-hidden">
+                        {pm.member.avatarUrl ? (
+                          <img
+                            src={pm.member.avatarUrl}
+                            alt={pm.member.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          pm.member.name[0]
+                        )}
                       </div>
                       <div>
                         <p className="font-medium">{pm.member.name}</p>

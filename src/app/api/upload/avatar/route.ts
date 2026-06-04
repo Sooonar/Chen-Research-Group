@@ -75,10 +75,17 @@ export async function POST(request: Request) {
       data: { avatarUrl },
     });
 
-    // 如果有成员记录，也更新成员头像
-    const member = await prisma.member.findFirst({
+    // 查找并更新成员头像
+    // 先按 userId 查找，如果没有则按邮箱查找
+    let member = await prisma.member.findFirst({
       where: { userId: user.id },
     });
+
+    if (!member && user.email) {
+      member = await prisma.member.findFirst({
+        where: { email: user.email },
+      });
+    }
 
     if (member) {
       await prisma.member.update({
