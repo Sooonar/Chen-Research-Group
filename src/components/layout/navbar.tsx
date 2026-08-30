@@ -10,6 +10,8 @@ const navItems = [
   { label: "团队成员", href: "/members" },
   { label: "科研成果", href: "/publications" },
   { label: "科研项目", href: "/projects" },
+  { label: "获奖", href: "/publications?tab=awards" },
+  { label: "竞赛", href: "/competitions" },
   { label: "新闻动态", href: "/news" },
   { label: "算法资源", href: "/algorithms" },
 ];
@@ -20,8 +22,7 @@ export function Navbar() {
 
   const isAdmin =
     session?.user &&
-    ((session.user as any).role === "SUPER_ADMIN" ||
-      (session.user as any).role === "ADMIN");
+    (session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN");
 
   return (
     <nav className="sticky top-0 z-50 glass-card border-b border-white/10">

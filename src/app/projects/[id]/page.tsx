@@ -59,12 +59,24 @@ interface Project {
       level: string;
     };
   }>;
+  competitions: Array<{
+    id: string;
+    name: string;
+    organizer: string;
+    year: number;
+    result: "WON" | "NOT_WON";
+    participants: string;
+    description: string | null;
+    award: { id: string; name: string; level: string } | null;
+  }>;
 }
 
 const statusMap: Record<string, string> = {
-  ONGOING: "进行中",
-  COMPLETED: "已结题",
-  SUSPENDED: "已暂停",
+  COMPLETED: "结题",
+  APPROVED: "获准",
+  APPLIED: "申请",
+  ONGOING: "申请",
+  SUSPENDED: "申请",
 };
 
 const titleMap: Record<string, string> = {
@@ -153,7 +165,7 @@ export default function ProjectDetailPage() {
                 <h1 className="text-3xl font-bold">{project.name}</h1>
                 <span
                   className={`px-3 py-1 rounded-full text-sm ${
-                    project.status === "ONGOING"
+                    project.status === "APPROVED"
                       ? "bg-green-500/20 text-green-400"
                       : project.status === "COMPLETED"
                       ? "bg-blue-500/20 text-blue-400"
@@ -260,6 +272,39 @@ export default function ProjectDetailPage() {
                         <h3 className="font-medium mb-2">{prog.title}</h3>
                         <p className="text-sm text-gray-400">{prog.content}</p>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Related Achievements */}
+            {project.competitions.length > 0 && (
+              <div className="glass-card p-8 mb-8">
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-yellow-400" />
+                  竞赛
+                </h2>
+                <div className="space-y-4">
+                  {project.competitions.map((competition) => (
+                    <div key={competition.id} className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-medium">{competition.name}</h3>
+                          <p className="text-sm text-gray-400 mt-1">{competition.organizer} · {competition.year} 年</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          competition.result === "WON"
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-gray-500/20 text-gray-400"
+                        }`}>
+                          {competition.result === "WON" ? "获奖" : "未获奖"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-2">参赛成员：{competition.participants}</p>
+                      {competition.award && (
+                        <p className="text-sm text-yellow-400/80 mt-2">已同步至获奖：{competition.award.name}</p>
+                      )}
                     </div>
                   ))}
                 </div>

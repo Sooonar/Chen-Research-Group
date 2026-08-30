@@ -167,6 +167,7 @@ model Award {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   projects      ProjectAward[]
+  competitionRecord Competition?
 
   @@map("awards")
 }
@@ -240,7 +241,7 @@ model Project {
   fundingAmount Float?    @map("funding_amount")  // 资助金额
   startDate     DateTime? @map("start_date")
   endDate       DateTime? @map("end_date")
-  status        ProjectStatus @default(ONGOING)
+  status        ProjectStatus @default(APPLIED)
   description   String?   @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -252,14 +253,45 @@ model Project {
   patents       ProjectPatent[]
   copyrights    ProjectCopyright[]
   awards        ProjectAward[]
+  competitions  Competition[]
 
   @@map("projects")
 }
 
 enum ProjectStatus {
-  ONGOING      // 进行中
-  COMPLETED    // 已结题
-  SUSPENDED    // 已暂停
+  COMPLETED    // 结题
+  APPROVED     // 获准
+  APPLIED      // 申请
+  ONGOING      // 旧数据兼容：进行中
+  SUSPENDED    // 旧数据兼容：已暂停
+}
+
+// ==================== 竞赛 ====================
+
+model Competition {
+  id           String            @id @default(cuid())
+  name         String            // 竞赛名称
+  organizer    String            // 主办方
+  year         Int
+  result       CompetitionResult @default(NOT_WON)
+  participants String            // 参赛同学（逗号分隔）
+  awardLevel   AwardLevel?       @map("award_level")
+  description  String?           @db.Text
+  imageUrl     String?           @map("image_url")
+  projectId    String?           @map("project_id")
+  awardId      String?           @unique @map("award_id")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  award        Award?             @relation(fields: [awardId], references: [id], onDelete: SetNull)
+
+  @@map("competitions")
+}
+
+enum CompetitionResult {
+  WON      // 获奖
+  NOT_WON  // 未获奖
 }
 
 // 项目成员

@@ -18,7 +18,7 @@ export default function EditProjectPage() {
     fundingAmount: "",
     startDate: "",
     endDate: "",
-    status: "ONGOING",
+    status: "APPLIED",
     description: "",
   });
 
@@ -35,7 +35,7 @@ export default function EditProjectPage() {
             fundingAmount: data.fundingAmount?.toString() || "",
             startDate: data.startDate ? data.startDate.split("T")[0] : "",
             endDate: data.endDate ? data.endDate.split("T")[0] : "",
-            status: data.status || "ONGOING",
+            status: data.status || "APPLIED",
             description: data.description || "",
           });
         }
@@ -104,9 +104,9 @@ export default function EditProjectPage() {
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">状态</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white">
-                <option value="ONGOING">进行中</option>
-                <option value="COMPLETED">已结题</option>
-                <option value="SUSPENDED">已暂停</option>
+                <option value="COMPLETED">结题</option>
+                <option value="APPROVED">获准</option>
+                <option value="APPLIED">申请</option>
               </select>
             </div>
           </div>

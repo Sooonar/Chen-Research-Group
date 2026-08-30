@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { Search } from "lucide-react";
 
 interface Member {
   id: string;
@@ -86,7 +87,18 @@ function getMemberTitle(member: Member): string {
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [filter, setFilter] = useState<string>("all");
+  const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const handleFilterChange = (nextFilter: string) => {
+    setFilter(nextFilter);
+    if (nextFilter === "TEACHER") {
+      setSearch("");
+      setGradeFilter("all");
+    }
+    if (nextFilter === "ALUMNI") setGradeFilter("all");
+  };
 
   useEffect(() => {
     async function fetchMembers() {
@@ -106,10 +118,16 @@ export default function MembersPage() {
     fetchMembers();
   }, []);
 
-  const filteredMembers =
-    filter === "all"
-      ? members
-      : members.filter((m) => m.title === filter);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredMembers = members.filter((member) => {
+    const matchesTitle = filter === "all" || member.title === filter;
+    const matchesGrade = gradeFilter === "all" || member.grade === gradeFilter;
+    const matchesSearch =
+      !normalizedSearch ||
+      member.name.toLowerCase().includes(normalizedSearch) ||
+      (member.researchDirection || "").toLowerCase().includes(normalizedSearch);
+    return matchesTitle && matchesGrade && matchesSearch;
+  });
 
   const titleGroups = ["TEACHER", "MASTER", "ALUMNI"];
 
@@ -134,7 +152,7 @@ export default function MembersPage() {
           {/* Filter buttons */}
           <div className="flex justify-center gap-4 mb-12">
             <button
-              onClick={() => setFilter("all")}
+              onClick={() => handleFilterChange("all")}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === "all"
                   ? "bg-blue-600 text-white"
@@ -146,7 +164,7 @@ export default function MembersPage() {
             {titleGroups.map((title) => (
               <button
                 key={title}
-                onClick={() => setFilter(title)}
+                onClick={() => handleFilterChange(title)}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === title
                     ? "bg-blue-600 text-white"
@@ -157,6 +175,35 @@ export default function MembersPage() {
               </button>
             ))}
           </div>
+
+          {filter !== "TEACHER" && (
+            <div className="flex flex-col sm:flex-row justify-center gap-3 mb-10">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="搜索姓名或专业"
+                  className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              {filter === "MASTER" && (
+                <select
+                  value={gradeFilter}
+                  onChange={(event) =>
+                    setGradeFilter(event.target.value === "all" ? "all" : Number(event.target.value))
+                  }
+                  className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label="按年级筛选"
+                >
+                  <option value="all">全部年级</option>
+                  <option value="1">研一</option>
+                  <option value="2">研二</option>
+                  <option value="3">研三</option>
+                </select>
+              )}
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center text-gray-400">加载中...</div>

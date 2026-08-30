@@ -204,9 +204,9 @@ enum MemberTitle {
 }
 
 enum ProjectStatus {
-  ONGOING      // 进行中
-  COMPLETED    // 已结题
-  SUSPENDED    // 已暂停
+  COMPLETED    // 结题
+  APPROVED     // 获准
+  APPLIED      // 申请
 }
 
 enum NewsCategory {

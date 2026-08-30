@@ -23,7 +23,7 @@ export default function NewProjectPage() {
     fundingAmount: "",
     startDate: "",
     endDate: "",
-    status: "ONGOING",
+    status: "APPLIED",
     description: "",
   });
 
@@ -125,9 +125,9 @@ export default function NewProjectPage() {
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
               >
-                <option value="ONGOING">进行中</option>
-                <option value="COMPLETED">已结题</option>
-                <option value="SUSPENDED">已暂停</option>
+                <option value="COMPLETED">结题</option>
+                <option value="APPROVED">获准</option>
+                <option value="APPLIED">申请</option>
               </select>
             </div>
           </div>

@@ -16,8 +16,9 @@ export async function middleware(request: NextRequest) {
       secret: process.env.NEXTAUTH_SECRET,
     });
 
-    if (!token) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+    const isAdmin = token && (token.role === "SUPER_ADMIN" || token.role === "ADMIN");
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL(token ? "/" : "/admin/login", request.url));
     }
   }
 

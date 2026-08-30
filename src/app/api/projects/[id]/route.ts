@@ -29,6 +29,12 @@ export async function GET(
         awards: {
           include: { award: true },
         },
+        competitions: {
+          include: {
+            award: true,
+          },
+          orderBy: [{ year: "desc" }, { createdAt: "desc" }],
+        },
       },
     });
 

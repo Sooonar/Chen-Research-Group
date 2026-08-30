@@ -12,6 +12,12 @@ export async function GET() {
         progress: {
           orderBy: { progressDate: "desc" },
         },
+        competitions: {
+          include: {
+            award: { select: { id: true, name: true, level: true } },
+          },
+          orderBy: [{ year: "desc" }, { createdAt: "desc" }],
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -47,7 +53,7 @@ export async function POST(request: Request) {
         fundingAmount: fundingAmount ? parseFloat(fundingAmount) : null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        status: status || "ONGOING",
+        status: status || "APPLIED",
         description,
         members: memberIds
           ? {

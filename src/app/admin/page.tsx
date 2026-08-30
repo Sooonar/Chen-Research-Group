@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, FileText, Award, Code, FileCode, Settings, LogOut, Newspaper, FolderOpen, Trophy, UserCog, ClipboardCheck } from "lucide-react";
+import { Users, FileText, Award, Code, FileCode, Settings, LogOut, Newspaper, FolderOpen, Trophy, UserCog, ClipboardCheck, Medal } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const adminMenus = [
@@ -12,6 +12,7 @@ const adminMenus = [
   { label: "专利管理", href: "/admin/patents", icon: Award, description: "管理专利信息" },
   { label: "软著管理", href: "/admin/copyrights", icon: Code, description: "管理软件著作权" },
   { label: "获奖管理", href: "/admin/awards", icon: Trophy, description: "管理获奖记录" },
+  { label: "竞赛管理", href: "/admin/competitions", icon: Medal, description: "管理竞赛及获奖同步" },
   { label: "项目管理", href: "/admin/projects", icon: FolderOpen, description: "管理科研项目" },
   { label: "新闻管理", href: "/admin/news", icon: Newspaper, description: "管理新闻动态" },
   { label: "算法资源", href: "/admin/algorithms", icon: FileCode, description: "管理算法资源" },

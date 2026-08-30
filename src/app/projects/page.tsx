@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Calendar, Users, FolderOpen } from "lucide-react";
+import { Calendar, Users, FolderOpen, Search } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 
@@ -23,29 +23,31 @@ interface Project {
 }
 
 const statusMap: Record<string, string> = {
-  ONGOING: "进行中",
-  COMPLETED: "已结题",
-  SUSPENDED: "已暂停",
+  COMPLETED: "结题",
+  APPROVED: "获准",
+  APPLIED: "申请",
+  ONGOING: "申请",
+  SUSPENDED: "申请",
 };
 
 const statusColorMap: Record<string, string> = {
-  ONGOING: "bg-green-500/20 text-green-400",
+  APPLIED: "bg-yellow-500/20 text-yellow-400",
+  APPROVED: "bg-green-500/20 text-green-400",
   COMPLETED: "bg-blue-500/20 text-blue-400",
+  ONGOING: "bg-yellow-500/20 text-yellow-400",
   SUSPENDED: "bg-yellow-500/20 text-yellow-400",
 };
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchProjects() {
       try {
         const res = await fetch("/api/projects");
-        if (res.ok) {
-          const data = await res.json();
-          setProjects(data);
-        }
+        if (res.ok) setProjects(await res.json());
       } catch (error) {
         console.error("Error fetching projects:", error);
       } finally {
@@ -55,6 +57,13 @@ export default function ProjectsPage() {
 
     fetchProjects();
   }, []);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredProjects = projects.filter((project) =>
+    !normalizedSearch ||
+    project.name.toLowerCase().includes(normalizedSearch) ||
+    project.leader.toLowerCase().includes(normalizedSearch)
+  );
 
   return (
     <>
@@ -74,13 +83,25 @@ export default function ProjectsPage() {
             </p>
           </motion.div>
 
+          <div className="flex justify-center mb-10">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="搜索项目名称或负责人"
+                className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
           {loading ? (
             <div className="text-center text-gray-400">加载中...</div>
-          ) : projects.length === 0 ? (
+          ) : filteredProjects.length === 0 ? (
             <div className="text-center text-gray-400">暂无项目</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {projects.map((project, index) => (
+              {filteredProjects.map((project, index) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -140,6 +161,7 @@ export default function ProjectsPage() {
               ))}
             </div>
           )}
+
         </div>
       </main>
       <Footer />

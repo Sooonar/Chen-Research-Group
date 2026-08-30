@@ -18,6 +18,10 @@ function parseDatabaseUrl() {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\//, ""),
     port: Number(url.port || 3306),
+    // MySQL 8 默认认证插件 caching_sha2_password 在非 TLS 连接下需要获取 RSA 公钥。
+    // 否则服务端认证缓存失效后（如 MySQL 重启），所有新连接都会失败，
+    // 表现为连接池超时（pool timeout）。见 mariadb 驱动的 allowPublicKeyRetrieval 选项。
+    allowPublicKeyRetrieval: true,
   };
 }
 
