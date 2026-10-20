@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { Pagination } from "@/components/ui/pagination";
+import { usePaginatedList } from "@/lib/use-paginated-list";
 import { Search } from "lucide-react";
 
 interface Member {
@@ -20,49 +22,6 @@ interface Member {
   createdAt: string;
   updatedAt: string;
 }
-
-// 占位数据
-const placeholderMembers: Member[] = [
-  {
-    id: "1",
-    name: "陈老师",
-    title: "TEACHER",
-    grade: null,
-    researchDirection: "人工智能、机器学习、深度学习",
-    bio: "硕士生导师，长期从事人工智能领域的研究工作",
-    email: "chen@example.com",
-    avatarUrl: null,
-    displayOrder: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    name: "张同学",
-    title: "MASTER",
-    grade: 2,
-    researchDirection: "计算机视觉、目标检测",
-    bio: "硕士二年级，研究方向为计算机视觉",
-    email: "zhang@example.com",
-    avatarUrl: null,
-    displayOrder: 2,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    name: "李同学",
-    title: "MASTER",
-    grade: 1,
-    researchDirection: "自然语言处理",
-    bio: "硕士一年级，研究方向为NLP",
-    email: "li@example.com",
-    avatarUrl: null,
-    displayOrder: 3,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 const titleMap: Record<string, string> = {
   TEACHER: "老师",
@@ -85,50 +44,48 @@ function getMemberTitle(member: Member): string {
 }
 
 export default function MembersPage() {
-  const [members, setMembers] = useState<Member[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const {
+    items: members,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    loading,
+    setPage,
+    changePageSize,
+    resetPage,
+  } = usePaginatedList<Member>("/api/members", {
+    title: filter === "all" ? undefined : filter,
+    grade: gradeFilter === "all" ? undefined : gradeFilter,
+    search: debouncedSearch || undefined,
+  });
+
+  // 输入停止 300ms 后再发起查询，避免每敲一个字都请求一次。
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      resetPage();
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search, resetPage]);
 
   const handleFilterChange = (nextFilter: string) => {
     setFilter(nextFilter);
     if (nextFilter === "TEACHER") {
       setSearch("");
+      setDebouncedSearch("");
       setGradeFilter("all");
     }
     if (nextFilter === "ALUMNI") setGradeFilter("all");
+    resetPage();
   };
 
-  useEffect(() => {
-    async function fetchMembers() {
-      try {
-        const res = await fetch("/api/members");
-        if (res.ok) {
-          const data = await res.json();
-          setMembers(data.length > 0 ? data : placeholderMembers);
-        }
-      } catch {
-        setMembers(placeholderMembers);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMembers();
-  }, []);
-
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredMembers = members.filter((member) => {
-    const matchesTitle = filter === "all" || member.title === filter;
-    const matchesGrade = gradeFilter === "all" || member.grade === gradeFilter;
-    const matchesSearch =
-      !normalizedSearch ||
-      member.name.toLowerCase().includes(normalizedSearch) ||
-      (member.researchDirection || "").toLowerCase().includes(normalizedSearch);
-    return matchesTitle && matchesGrade && matchesSearch;
-  });
-
+  const hasFilters = filter !== "all" || gradeFilter !== "all" || debouncedSearch !== "";
   const titleGroups = ["TEACHER", "MASTER", "ALUMNI"];
 
   return (
@@ -190,9 +147,12 @@ export default function MembersPage() {
               {filter === "MASTER" && (
                 <select
                   value={gradeFilter}
-                  onChange={(event) =>
-                    setGradeFilter(event.target.value === "all" ? "all" : Number(event.target.value))
-                  }
+                  onChange={(event) => {
+                    setGradeFilter(
+                      event.target.value === "all" ? "all" : Number(event.target.value)
+                    );
+                    resetPage();
+                  }}
                   className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   aria-label="按年级筛选"
                 >
@@ -205,48 +165,67 @@ export default function MembersPage() {
             </div>
           )}
 
-          {loading ? (
+          {loading && members.length === 0 ? (
             <div className="text-center text-gray-400">加载中...</div>
+          ) : members.length === 0 ? (
+            <div className="glass-card p-10 text-center text-gray-400">
+              {hasFilters ? "没有找到符合条件的成员" : "暂无成员数据"}
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMembers.map((member, index) => (
-                <motion.div
-                  key={member.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <Link href={`/members/${member.id}`}>
-                    <div className="glass-card p-6 hover:bg-white/5 transition-all duration-200 cursor-pointer group h-full">
-                      <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-xl font-bold text-white">
-                          {member.avatarUrl ? (
-                            <img
-                              src={member.avatarUrl}
-                              alt={member.name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            member.name[0]
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold group-hover:text-blue-400 transition-colors">
-                            {member.name}
-                          </h3>
-                          <p className="text-sm text-blue-400 mb-2">
-                            {getMemberTitle(member)}
-                          </p>
-                          <p className="text-sm text-gray-400 line-clamp-2">
-                            {member.researchDirection}
-                          </p>
+            <>
+              <div
+                className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity ${
+                  loading ? "opacity-60" : "opacity-100"
+                }`}
+              >
+                {members.map((member, index) => (
+                  <motion.div
+                    key={member.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: Math.min(index, 9) * 0.05 }}
+                  >
+                    <Link href={`/members/${member.id}`}>
+                      <div className="glass-card p-6 hover:bg-white/5 transition-all duration-200 cursor-pointer group h-full">
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-xl font-bold text-white">
+                            {member.avatarUrl ? (
+                              <img
+                                src={member.avatarUrl}
+                                alt={member.name}
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              member.name[0]
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-semibold group-hover:text-blue-400 transition-colors">
+                              {member.name}
+                            </h3>
+                            <p className="text-sm text-blue-400 mb-2">
+                              {getMemberTitle(member)}
+                            </p>
+                            <p className="text-sm text-gray-400 line-clamp-2">
+                              {member.researchDirection}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={changePageSize}
+              />
+            </>
           )}
         </div>
       </main>

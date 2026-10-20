@@ -1,19 +1,52 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { clampPage, getTotalPages, parsePagination, toPageResult } from "@/lib/pagination";
 
 const competitionResults = ["WON", "NOT_WON"] as const;
+type CompetitionResultValue = (typeof competitionResults)[number];
 
-// GET /api/competitions
-export async function GET() {
+const include = {
+  project: { select: { id: true, name: true } },
+  award: { select: { id: true, name: true, level: true } },
+} satisfies Prisma.CompetitionInclude;
+
+const orderBy: Prisma.CompetitionOrderByWithRelationInput[] = [
+  { year: "desc" },
+  { createdAt: "desc" },
+];
+
+// GET /api/competitions - 获取竞赛记录（支持分页与结果筛选）
+export async function GET(request: Request) {
   try {
+    const searchParams = new URL(request.url).searchParams;
+    const pagination = parsePagination(searchParams);
+    const resultParam = searchParams.get("result");
+    const result = competitionResults.includes(resultParam as CompetitionResultValue)
+      ? (resultParam as CompetitionResultValue)
+      : undefined;
+
+    const where: Prisma.CompetitionWhereInput = result ? { result } : {};
+
+    if (!pagination.paginated) {
+      const competitions = await prisma.competition.findMany({ where, include, orderBy });
+      return NextResponse.json(competitions);
+    }
+
+    const total = await prisma.competition.count({ where });
+    const totalPages = getTotalPages(total, pagination.pageSize);
+    const page = clampPage(pagination.page, totalPages);
     const competitions = await prisma.competition.findMany({
-      include: {
-        project: { select: { id: true, name: true } },
-        award: { select: { id: true, name: true, level: true } },
-      },
-      orderBy: [{ year: "desc" }, { createdAt: "desc" }],
+      where,
+      include,
+      orderBy,
+      skip: (page - 1) * pagination.pageSize,
+      take: pagination.pageSize,
     });
-    return NextResponse.json(competitions);
+
+    return NextResponse.json(
+      toPageResult(competitions, total, page, pagination.pageSize)
+    );
   } catch (error) {
     console.error("Error fetching competitions:", error);
     return NextResponse.json({ error: "获取竞赛记录失败" }, { status: 500 });

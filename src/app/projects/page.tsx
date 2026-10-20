@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Calendar, Users, FolderOpen, Search } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { Pagination } from "@/components/ui/pagination";
+import { usePaginatedList } from "@/lib/use-paginated-list";
 
 interface Project {
   id: string;
@@ -39,31 +41,31 @@ const statusColorMap: Record<string, string> = {
 };
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const {
+    items: projects,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    loading,
+    setPage,
+    changePageSize,
+    resetPage,
+  } = usePaginatedList<Project>("/api/projects", {
+    search: debouncedSearch || undefined,
+  });
+
+  // 输入停止 300ms 后再查询。
   useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const res = await fetch("/api/projects");
-        if (res.ok) setProjects(await res.json());
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProjects();
-  }, []);
-
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredProjects = projects.filter((project) =>
-    !normalizedSearch ||
-    project.name.toLowerCase().includes(normalizedSearch) ||
-    project.leader.toLowerCase().includes(normalizedSearch)
-  );
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      resetPage();
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search, resetPage]);
 
   return (
     <>
@@ -95,73 +97,89 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          {loading ? (
+          {loading && projects.length === 0 ? (
             <div className="text-center text-gray-400">加载中...</div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="text-center text-gray-400">暂无项目</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredProjects.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                >
-                  <Link href={`/projects/${project.id}`}>
-                    <div className="glass-card p-6 hover:bg-white/5 transition-colors cursor-pointer h-full">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                            <FolderOpen className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold hover:text-blue-400 transition-colors">
-                              {project.name}
-                            </h3>
-                            <p className="text-sm text-gray-400">
-                              负责人：{project.leader}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            statusColorMap[project.status] || "bg-gray-500/20 text-gray-400"
-                          }`}
-                        >
-                          {statusMap[project.status] || project.status}
-                        </span>
-                      </div>
-
-                      {project.description && (
-                        <p className="text-sm text-gray-400 mb-4 line-clamp-2">
-                          {project.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        {project.startDate && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(project.startDate).getFullYear()}
-                            {project.endDate &&
-                              ` - ${new Date(project.endDate).getFullYear()}`}
-                          </span>
-                        )}
-                        {project.members.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {project.members.length} 人
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+          ) : projects.length === 0 ? (
+            <div className="text-center text-gray-400">
+              {debouncedSearch ? "没有找到符合条件的项目" : "暂无项目"}
             </div>
-          )}
+          ) : (
+            <>
+              <div
+                className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity ${
+                  loading ? "opacity-60" : "opacity-100"
+                }`}
+              >
+                {projects.map((project, index) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: Math.min(index, 9) * 0.05 }}
+                  >
+                    <Link href={`/projects/${project.id}`}>
+                      <div className="glass-card p-6 hover:bg-white/5 transition-colors cursor-pointer h-full">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                              <FolderOpen className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold hover:text-blue-400 transition-colors">
+                                {project.name}
+                              </h3>
+                              <p className="text-sm text-gray-400">
+                                负责人：{project.leader}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              statusColorMap[project.status] || "bg-gray-500/20 text-gray-400"
+                            }`}
+                          >
+                            {statusMap[project.status] || project.status}
+                          </span>
+                        </div>
 
+                        {project.description && (
+                          <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+                            {project.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          {project.startDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(project.startDate).getFullYear()}
+                              {project.endDate &&
+                                ` - ${new Date(project.endDate).getFullYear()}`}
+                            </span>
+                          )}
+                          {project.members.length > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {project.members.length} 人
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={changePageSize}
+              />
+            </>
+          )}
         </div>
       </main>
       <Footer />

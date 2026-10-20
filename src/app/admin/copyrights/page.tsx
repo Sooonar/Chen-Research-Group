@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { usePaginatedList } from "@/lib/use-paginated-list";
 
 interface Copyright {
   id: string;
@@ -13,26 +14,17 @@ interface Copyright {
 }
 
 export default function CopyrightsManagementPage() {
-  const [copyrights, setCopyrights] = useState<Copyright[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCopyrights();
-  }, []);
-
-  async function fetchCopyrights() {
-    try {
-      const res = await fetch("/api/copyrights");
-      if (res.ok) {
-        const data = await res.json();
-        setCopyrights(data);
-      }
-    } catch (error) {
-      console.error("Error fetching copyrights:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const {
+    items: copyrights,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    loading,
+    setPage,
+    changePageSize,
+    refresh,
+  } = usePaginatedList<Copyright>("/api/copyrights");
 
   async function handleDelete(id: string) {
     if (!confirm("确定要删除此软件著作权吗？")) return;
@@ -40,7 +32,7 @@ export default function CopyrightsManagementPage() {
     try {
       const res = await fetch(`/api/copyrights/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setCopyrights(copyrights.filter((c) => c.id !== id));
+        refresh();
       } else {
         alert("删除失败");
       }
@@ -75,7 +67,7 @@ export default function CopyrightsManagementPage() {
           </Link>
         </div>
 
-        {loading ? (
+        {loading && copyrights.length === 0 ? (
           <div className="text-center text-gray-400">加载中...</div>
         ) : copyrights.length === 0 ? (
           <div className="glass-card p-12 text-center">
@@ -88,45 +80,55 @@ export default function CopyrightsManagementPage() {
             </Link>
           </div>
         ) : (
-          <div className="glass-card overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left p-4 text-gray-400 font-medium">名称</th>
-                  <th className="text-left p-4 text-gray-400 font-medium">登记号</th>
-                  <th className="text-left p-4 text-gray-400 font-medium">版本</th>
-                  <th className="text-left p-4 text-gray-400 font-medium">登记日期</th>
-                  <th className="text-right p-4 text-gray-400 font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {copyrights.map((copyright) => (
-                  <tr key={copyright.id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-4 font-medium">{copyright.name}</td>
-                    <td className="p-4 text-gray-300 text-sm">{copyright.registrationNumber}</td>
-                    <td className="p-4 text-gray-400">{copyright.version || "-"}</td>
-                    <td className="p-4 text-gray-400">{copyright.registrationDate || "-"}</td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/copyrights/${copyright.id}/edit`}
-                          className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(copyright.id)}
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className={`glass-card overflow-hidden transition-opacity ${loading ? "opacity-60" : "opacity-100"}`}>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left p-4 text-gray-400 font-medium">名称</th>
+                    <th className="text-left p-4 text-gray-400 font-medium">登记号</th>
+                    <th className="text-left p-4 text-gray-400 font-medium">版本</th>
+                    <th className="text-left p-4 text-gray-400 font-medium">登记日期</th>
+                    <th className="text-right p-4 text-gray-400 font-medium">操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {copyrights.map((copyright) => (
+                    <tr key={copyright.id} className="border-b border-white/5 hover:bg-white/5">
+                      <td className="p-4 font-medium">{copyright.name}</td>
+                      <td className="p-4 text-gray-300 text-sm">{copyright.registrationNumber}</td>
+                      <td className="p-4 text-gray-400">{copyright.version || "-"}</td>
+                      <td className="p-4 text-gray-400">{copyright.registrationDate || "-"}</td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/copyrights/${copyright.id}/edit`}
+                            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(copyright.id)}
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={changePageSize}
+            />
+          </>
         )}
       </div>
     </div>
