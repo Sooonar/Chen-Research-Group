@@ -12,7 +12,8 @@ interface SiteConfigItem {
 }
 
 const defaultConfigs: SiteConfigItem[] = [
-  { key: "lab_name", label: "课题组名称", value: "陈老师课题组", type: "text" },
+  { key: "lab_name", label: "课题组名称", value: "数智管网・建科新能", type: "text" },
+  { key: "lab_short_name", label: "导航栏简称（留空则取课题组名称中「・」前的一段）", value: "数智管网", type: "text" },
   { key: "lab_subtitle", label: "副标题", value: "致力于前沿科学研究，推动技术创新与突破", type: "text" },
   { key: "lab_description", label: "课题组简介", value: "我们专注于人工智能、机器学习、计算机视觉等领域的研究工作，在顶级期刊和会议上发表了多篇高水平论文，培养了一批优秀的研究生人才。", type: "textarea" },
   { key: "admission_info", label: "招生信息", value: "课题组常年招收对科研充满热情的博士研究生和硕士研究生。我们提供良好的科研环境、充足的研究经费和丰富的学术交流机会。", type: "textarea" },

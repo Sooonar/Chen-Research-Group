@@ -1,11 +1,17 @@
+"use client";
+
+import { useSiteName } from "@/lib/use-site-name";
+
 export function Footer() {
+  const siteName = useSiteName();
+
   return (
     <footer className="border-t border-white/10 py-8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left">
             <p className="text-gray-400 text-sm">
-              &copy; {new Date().getFullYear()} 陈老师课题组. All rights reserved.
+              &copy; {new Date().getFullYear()} {siteName}. All rights reserved.
             </p>
           </div>
           <div className="flex items-center gap-6">

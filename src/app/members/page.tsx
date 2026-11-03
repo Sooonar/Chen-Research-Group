@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Pagination } from "@/components/ui/pagination";
 import { usePaginatedList } from "@/lib/use-paginated-list";
+import { MEMBER_DEFAULT_PAGE_SIZE, MEMBER_PAGE_SIZE_OPTIONS } from "@/lib/pagination";
 import { Search } from "lucide-react";
 
 interface Member {
@@ -59,11 +60,15 @@ export default function MembersPage() {
     setPage,
     changePageSize,
     resetPage,
-  } = usePaginatedList<Member>("/api/members", {
-    title: filter === "all" ? undefined : filter,
-    grade: gradeFilter === "all" ? undefined : gradeFilter,
-    search: debouncedSearch || undefined,
-  });
+  } = usePaginatedList<Member>(
+    "/api/members",
+    {
+      title: filter === "all" ? undefined : filter,
+      grade: gradeFilter === "all" ? undefined : gradeFilter,
+      search: debouncedSearch || undefined,
+    },
+    { pageSize: MEMBER_DEFAULT_PAGE_SIZE }
+  );
 
   // 输入停止 300ms 后再发起查询，避免每敲一个字都请求一次。
   useEffect(() => {
@@ -224,6 +229,7 @@ export default function MembersPage() {
                 totalPages={totalPages}
                 onPageChange={setPage}
                 onPageSizeChange={changePageSize}
+                pageSizeOptions={MEMBER_PAGE_SIZE_OPTIONS}
               />
             </>
           )}

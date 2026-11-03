@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { deriveGrade, getAcademicYear, gradeLabels } from "@/lib/member-grade";
 
 export default function NewMemberPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function NewMemberPage() {
   const [form, setForm] = useState({
     name: "",
     title: "MASTER",
+    enrollmentYear: "",
     researchDirection: "",
     bio: "",
     email: "",
@@ -25,7 +27,10 @@ export default function NewMemberPage() {
       const res = await fetch("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          enrollmentYear: form.enrollmentYear ? parseInt(form.enrollmentYear) : null,
+        }),
       });
 
       if (res.ok) {
@@ -40,6 +45,8 @@ export default function NewMemberPage() {
       setLoading(false);
     }
   };
+
+  const previewGrade = form.enrollmentYear ? deriveGrade(parseInt(form.enrollmentYear)) : null;
 
   return (
     <div className="min-h-screen py-8">
@@ -83,6 +90,30 @@ export default function NewMemberPage() {
               <option value="ALUMNI">已毕业</option>
             </select>
           </div>
+
+          {(form.title === "MASTER" || form.title === "ALUMNI") && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                入学年份
+              </label>
+              <input
+                type="number"
+                min="2000"
+                max="2100"
+                value={form.enrollmentYear}
+                onChange={(e) => setForm({ ...form, enrollmentYear: e.target.value })}
+                placeholder={`如 ${getAcademicYear()}`}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                {form.title === "ALUMNI"
+                  ? "已毕业成员保留入学年份供日后查档，不参与「研几」展示"
+                  : previewGrade
+                    ? `按当前（${getAcademicYear()}）学年显示为「${gradeLabels[previewGrade]}」`
+                    : "填写后年级由系统按学年自动推算，每年 9 月自动升一级"}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">

@@ -15,6 +15,7 @@
 /output
 /tmp
 /.codex-tmp-deps
+/.workbuddy
 
 # next.js
 /.next/

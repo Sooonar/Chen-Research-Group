@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "管理后台 - 陈老师课题组",
+  title: "管理后台 - 数智管网",
   description: "课题组网站管理后台",
 };
 

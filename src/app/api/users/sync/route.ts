@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { enrollmentYearFromGrade } from "@/lib/member-grade";
 
 // POST /api/users/sync - 同步用户和成员数据
 export async function POST() {
@@ -53,6 +54,8 @@ export async function POST() {
             name: user.name,
             title: memberTitle,
             grade: memberTitle === "MASTER" ? user.grade : null,
+            enrollmentYear:
+              memberTitle === "MASTER" ? enrollmentYearFromGrade(user.grade) : null,
             email: user.email,
             displayOrder: memberTitle === "TEACHER" ? 0 : (user.grade || 1) * 10,
           },

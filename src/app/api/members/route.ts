@@ -7,6 +7,12 @@ import {
   parsePagination,
   toPageResult,
 } from "@/lib/pagination";
+import {
+  deriveGrade,
+  enrollmentYearFromGrade,
+  resolveMemberGrade,
+  withComputedGrade,
+} from "@/lib/member-grade";
 
 // 成员排序权重：老师 > 研三 > 研二 > 研一
 const titleOrder: Record<string, number> = {
@@ -18,16 +24,11 @@ const titleOrder: Record<string, number> = {
 const memberTitles = ["TEACHER", "MASTER", "ALUMNI"] as const;
 type MemberTitleValue = (typeof memberTitles)[number];
 
-function getGradeOrder(grade: number | null): number {
-  if (!grade) return 0;
-  // 与历史行为保持一致：同职称内按年级升序（研一 → 研三）排列
-  return 4 - grade;
-}
-
 interface SortableMember {
   id: string;
   title: string;
   grade: number | null;
+  enrollmentYear?: number | null;
   displayOrder: number;
   createdAt: Date;
 }
@@ -39,10 +40,11 @@ function compareMembers(a: SortableMember, b: SortableMember): number {
   // 首先按职称排序
   if (orderA !== orderB) return orderA - orderB;
 
-  // 同一职称内，按年级排序
+  // 同一职称内，按年级倒序：研三 → 研二 → 研一。
+  // 年级由入学年份实时推算，没有年级信息（含已超学制）的排在最后。
   if (a.title === "MASTER" && b.title === "MASTER") {
-    const gradeA = getGradeOrder(a.grade);
-    const gradeB = getGradeOrder(b.grade);
+    const gradeA = resolveMemberGrade(a).grade ?? 0;
+    const gradeB = resolveMemberGrade(b).grade ?? 0;
     if (gradeA !== gradeB) return gradeB - gradeA;
   }
 
@@ -64,14 +66,13 @@ export async function GET(request: Request) {
       : undefined;
 
     const gradeParam = Number.parseInt(searchParams.get("grade") ?? "", 10);
-    const grade =
+    const gradeFilter =
       Number.isFinite(gradeParam) && gradeParam >= 1 && gradeParam <= 3
         ? gradeParam
         : undefined;
 
     const conditions: Prisma.MemberWhereInput[] = [];
     if (title) conditions.push({ title });
-    if (grade !== undefined) conditions.push({ grade });
     if (search) {
       conditions.push({
         OR: [
@@ -85,7 +86,12 @@ export async function GET(request: Request) {
     if (!pagination.paginated) {
       const members = await prisma.member.findMany({ where });
       members.sort(compareMembers);
-      return NextResponse.json(members);
+      // 年级是按入学年份算出来的，SQL 里没法筛，放到内存里处理（成员量级很小）
+      const computed = members.map((member) => withComputedGrade(member));
+      const filtered = gradeFilter
+        ? computed.filter((member) => member.grade === gradeFilter)
+        : computed;
+      return NextResponse.json(filtered);
     }
 
     // 排序依赖“职称权重 + 年级”，先只取排序需要的字段，再按当前页取完整记录。
@@ -95,16 +101,21 @@ export async function GET(request: Request) {
         id: true,
         title: true,
         grade: true,
+        enrollmentYear: true,
         displayOrder: true,
         createdAt: true,
       },
     });
     sortable.sort(compareMembers);
 
-    const total = sortable.length;
+    const matched = gradeFilter
+      ? sortable.filter((member) => resolveMemberGrade(member).grade === gradeFilter)
+      : sortable;
+
+    const total = matched.length;
     const totalPages = getTotalPages(total, pagination.pageSize);
     const page = clampPage(pagination.page, totalPages);
-    const pageIds = sortable
+    const pageIds = matched
       .slice((page - 1) * pagination.pageSize, page * pagination.pageSize)
       .map((member) => member.id);
 
@@ -115,7 +126,8 @@ export async function GET(request: Request) {
     const rowsById = new Map(rows.map((member) => [member.id, member]));
     const items = pageIds
       .map((id) => rowsById.get(id))
-      .filter((member): member is Member => Boolean(member));
+      .filter((member): member is Member => Boolean(member))
+      .map((member) => withComputedGrade(member));
 
     return NextResponse.json(toPageResult(items, total, page, pagination.pageSize));
   } catch (error) {
@@ -128,13 +140,24 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, title, grade, researchDirection, bio, email, displayOrder } = body;
+    const { name, title, grade, enrollmentYear, researchDirection, bio, email, displayOrder } =
+      body;
+
+    // 入学年份优先；只给了年级时反推入学年份，两个字段保持同步
+    const parsedEnrollmentYear = enrollmentYear ? parseInt(enrollmentYear.toString()) : null;
+    const parsedGrade = grade ? parseInt(grade.toString()) : null;
+    const finalEnrollmentYear =
+      parsedEnrollmentYear ?? enrollmentYearFromGrade(parsedGrade);
+    const finalGrade = parsedEnrollmentYear
+      ? deriveGrade(parsedEnrollmentYear)
+      : parsedGrade;
 
     const member = await prisma.member.create({
       data: {
         name,
         title,
-        grade: grade ? parseInt(grade.toString()) : null,
+        grade: finalGrade,
+        enrollmentYear: finalEnrollmentYear,
         researchDirection,
         bio,
         email,

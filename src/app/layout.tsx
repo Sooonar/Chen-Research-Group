@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "陈老师课题组 - 研究团队主页",
-  description: "陈老师课题组官方网站，展示团队研究成果、成员信息和算法资源",
+  title: "数智管网 - 研究团队主页",
+  description: "数智管网官方网站，展示团队研究成果、成员信息和算法资源",
 };
 
 export default function RootLayout({

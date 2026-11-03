@@ -1,27 +1,30 @@
 # 陈老师课题组网站
 
-课题组官方介绍网站，展示团队研究成果、成员信息、科研项目和算法资源。
+课题组官方介绍网站，展示团队研究成果、成员信息、科研项目、竞赛获奖和算法资源。
 
 ## 技术栈
 
 | 类别   | 技术                             | 版本 |
 | ------ | -------------------------------- | ---- |
 | 框架   | Next.js (App Router)             | 16.x |
-| 前端   | React + Tailwind CSS + shadcn/ui | -    |
+| 前端   | React + Tailwind CSS + shadcn/ui | 19 / 4 |
 | 动效   | Framer Motion                    | -    |
 | 图标   | Lucide React                     | -    |
 | 数据库 | MySQL                            | 8.x  |
-| ORM    | Prisma                           | 7.x  |
-| 认证   | NextAuth.js                      | -    |
+| ORM    | Prisma（mariadb driver adapter） | 7.x  |
+| 认证   | NextAuth.js                      | 4.x  |
 | 语言   | TypeScript                       | 5.x  |
+| 运行时 | Node.js                          | 22（Docker 镜像 node:22-bookworm-slim） |
+| 部署   | Docker Compose                   | -    |
 
 ## 项目结构
 
 ```
-chen-group-website/
+Chen-Research-Group/
 ├── prisma/
-│   ├── schema.prisma          # 数据库模型定义
-│   └── config.ts              # Prisma 配置
+│   └── schema.prisma          # 数据库模型定义
+├── scripts/
+│   └── import-existing-data.cjs  # 存量数据导入脚本（成员/项目/成果）
 ├── src/
 │   ├── app/
 │   │   ├── page.tsx           # 首页
@@ -35,14 +38,11 @@ chen-group-website/
 │   │   │   ├── page.tsx       # 项目列表
 │   │   │   └── [id]/page.tsx  # 项目详情
 │   │   ├── news/              # 新闻动态页面
-│   │   │   ├── page.tsx       # 新闻列表
-│   │   │   └── [id]/page.tsx  # 新闻详情
+│   │   ├── competitions/      # 竞赛获奖页面
 │   │   ├── algorithms/        # 算法资源页面
 │   │   ├── profile/           # 个人中心
 │   │   │   ├── page.tsx       # 个人资料
 │   │   │   └── submissions/   # 我的成果
-│   │   │       ├── page.tsx   # 成果列表
-│   │   │       └── new/       # 提交新成果
 │   │   ├── admin/             # 管理后台
 │   │   │   ├── page.tsx       # 后台首页
 │   │   │   ├── login/         # 登录
@@ -54,6 +54,7 @@ chen-group-website/
 │   │   │   ├── patents/       # 专利管理
 │   │   │   ├── copyrights/    # 软著管理
 │   │   │   ├── awards/        # 获奖管理
+│   │   │   ├── competitions/  # 竞赛管理
 │   │   │   ├── projects/      # 项目管理
 │   │   │   ├── news/          # 新闻管理
 │   │   │   ├── algorithms/    # 算法管理
@@ -61,38 +62,41 @@ chen-group-website/
 │   │   └── api/               # API 路由
 │   │       ├── auth/          # 认证 API
 │   │       ├── user/          # 用户 API
-│   │       ├── users/         # 用户管理 API
+│   │       ├── users/         # 用户管理 API（含 sync 同步）
 │   │       ├── submissions/   # 成果提交 API
 │   │       ├── members/       # 成员 API
 │   │       ├── papers/        # 论文 API
 │   │       ├── patents/       # 专利 API
 │   │       ├── copyrights/    # 软著 API
 │   │       ├── awards/        # 获奖 API
+│   │       ├── competitions/  # 竞赛 API
 │   │       ├── projects/      # 项目 API
 │   │       ├── news/          # 新闻 API
 │   │       ├── algorithms/    # 算法 API
+│   │       ├── upload/        # 头像上传 API
 │   │       └── settings/      # 设置 API
 │   ├── components/
-│   │   ├── layout/            # 布局组件
-│   │   │   ├── navbar.tsx     # 导航栏
-│   │   │   └── footer.tsx     # 页脚
-│   │   ├── sections/          # 首页模块
-│   │   │   ├── hero-section.tsx
-│   │   │   ├── team-preview.tsx
-│   │   │   ├── stats-section.tsx
-│   │   │   └── admission-section.tsx
+│   │   ├── layout/            # 布局组件（navbar / footer）
+│   │   ├── sections/          # 首页模块（hero / team / stats / admission）
+│   │   ├── ui/                # 通用 UI 组件（含分页）
+│   │   ├── upload/            # 上传组件（头像裁剪）
 │   │   └── providers.tsx      # SessionProvider
 │   ├── lib/
 │   │   ├── prisma.ts          # Prisma 客户端
-│   │   └── auth.ts            # 认证工具
+│   │   ├── auth.ts            # 认证工具
+│   │   ├── auth-options.ts    # NextAuth 配置
+│   │   ├── pagination.ts      # 分页公共约定（前后端共用）
+│   │   └── use-paginated-list.ts  # 列表分页 Hook
 │   ├── types/
 │   │   └── next-auth.d.ts     # NextAuth 类型扩展
 │   └── middleware.ts          # 认证中间件
 ├── public/                    # 静态资源
-├── .env.local                 # 环境变量（不提交）
+├── Dockerfile                 # 三阶段构建（deps → builder → runner）
+├── docker-compose.yml         # 部署编排（阶段二）
+├── prisma.config.ts           # Prisma 7 配置（加载 .env.local）
+├── .env.local                 # 开发环境变量（不提交）
+├── .env.production            # 生产环境变量（仅服务器，不提交）
 ├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
 └── next.config.ts
 ```
 
@@ -127,7 +131,7 @@ mysql -u root -e "CREATE DATABASE group_website CHARACTER SET utf8mb4 COLLATE ut
 
 ### 4. 配置环境变量
 
-复制 `.env.example` 为 `.env.local`，修改数据库连接信息：
+在项目根目录直接创建 `.env.local`：
 
 ```env
 # 数据库连接
@@ -138,10 +142,13 @@ NEXTAUTH_SECRET="随机生成的密钥"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
+> Prisma 7 的 CLI 不会自动加载 `.env` 文件，项目根目录的 `prisma.config.ts` 通过 `@next/env` 加载 `.env.local`，与 Next.js 应用行为保持一致。
+
 ### 5. 初始化数据库表
 
 ```bash
 npx prisma db push
+npx prisma generate
 ```
 
 ### 6. 启动开发服务器
@@ -151,6 +158,14 @@ npm run dev
 ```
 
 访问 http://localhost:3000
+
+### 7. 导入存量数据（可选）
+
+从 JSON 文件导入成员、项目、成果等存量数据：
+
+```bash
+node scripts/import-existing-data.cjs <json-path> [--dry-run]
+```
 
 ## 数据库模型
 
@@ -164,6 +179,7 @@ npm run dev
 | `patents`             | 专利                             |
 | `software_copyrights` | 软件著作权                       |
 | `awards`              | 获奖记录                         |
+| `competitions`        | 竞赛获奖记录                     |
 | `algorithms`          | 算法资源                         |
 | `projects`            | 科研项目                         |
 | `project_progress`    | 项目进展                         |
@@ -209,6 +225,11 @@ enum ProjectStatus {
   APPLIED      // 申请
 }
 
+enum CompetitionResult {
+  WON          // 获奖胜出
+  NOT_WON      // 未胜出
+}
+
 enum NewsCategory {
   GROUP        // 组内新闻
   ACADEMIC     // 学术动态
@@ -224,9 +245,10 @@ enum NewsCategory {
 | `userId`        | String?     | 关联用户 ID                           |
 | `name`          | String      | 姓名                                  |
 | `title`         | MemberTitle | 职称（TEACHER/MASTER/ALUMNI）         |
-| `grade`         | Int?        | 年级（1=研一, 2=研二, 3=研三，仅硕士生） |
+| `grade`         | Int?        | 年级（1=研一, 2=研二, 3=研三，仅硕士生）<br>由入学年份推算后回写，仅作冗余 |
+| `enrollmentYear`| Int?        | 入学年份（如 2024）。年级由此按学年实时推算，每年 9 月自动升级 |
 | `researchDirection` | String?   | 研究方向                              |
-| `bio`           | String?     | 个人简介                              |
+| `bio`           | String?     | 个人简介（一行档案：院系/专业/学生类别/学号/手机/论文题目/入学日期，展示在成员详情页） |
 | `email`         | String?     | 邮箱                                  |
 | `avatarUrl`     | String?     | 头像 URL                              |
 | `displayOrder`  | Int         | 排序权重                              |
@@ -234,6 +256,8 @@ enum NewsCategory {
 | `graduationYear`| Int?        | 毕业年份                              |
 
 ## API 路由
+
+> 列表类接口（成员、论文、专利、软著、获奖、竞赛、项目）统一支持 `?page=&pageSize=` 分页（公共约定见 `src/lib/pagination.ts`，默认每页 10 条、上限 100）。请求不带分页参数时返回全量数组，供下拉选择、首页统计等场景使用。
 
 ### 认证
 
@@ -251,11 +275,12 @@ enum NewsCategory {
 
 ### 用户管理（管理员）
 
-| 方法   | 路径              | 说明                   |
-| ------ | ----------------- | ---------------------- |
-| GET    | `/api/users`     | 获取用户列表           |
-| PUT    | `/api/users/[id]` | 审核用户/修改角色      |
-| DELETE | `/api/users/[id]` | 删除用户               |
+| 方法   | 路径                  | 说明                   |
+| ------ | --------------------- | ---------------------- |
+| GET    | `/api/users`        | 获取用户列表           |
+| PUT    | `/api/users/[id]`   | 审核用户/修改角色      |
+| DELETE | `/api/users/[id]`   | 删除用户               |
+| POST   | `/api/users/sync`   | 同步用户与成员数据（为已审核用户补建成员记录） |
 
 ### 成果提交
 
@@ -266,11 +291,17 @@ enum NewsCategory {
 | PUT    | `/api/submissions/[id]` | 审核提交（通过/拒绝）  |
 | DELETE | `/api/submissions/[id]` | 删除提交               |
 
+### 上传
+
+| 方法 | 路径                  | 说明                                    |
+| ---- | --------------------- | --------------------------------------- |
+| POST | `/api/upload/avatar` | 上传头像（JPG/PNG/GIF/WebP，≤ 2MB） |
+
 ### 成员
 
 | 方法   | 路径                  | 说明         |
 | ------ | --------------------- | ------------ |
-| GET    | `/api/members`      | 获取成员列表（自动排序） |
+| GET    | `/api/members`      | 获取成员列表（自动排序，支持 `search`/`title`/`grade` 筛选） |
 | POST   | `/api/members`      | 创建成员     |
 | GET    | `/api/members/[id]` | 获取单个成员 |
 | PUT    | `/api/members/[id]` | 更新成员     |
@@ -315,6 +346,16 @@ enum NewsCategory {
 | GET    | `/api/awards/[id]` | 获取单个获奖 |
 | PUT    | `/api/awards/[id]` | 更新获奖     |
 | DELETE | `/api/awards/[id]` | 删除获奖     |
+
+### 竞赛记录
+
+| 方法   | 路径                       | 说明         |
+| ------ | -------------------------- | ------------ |
+| GET    | `/api/competitions`      | 获取竞赛列表（支持 `result` 筛选） |
+| POST   | `/api/competitions`      | 创建竞赛     |
+| GET    | `/api/competitions/[id]` | 获取单条竞赛 |
+| PUT    | `/api/competitions/[id]` | 更新竞赛     |
+| DELETE | `/api/competitions/[id]` | 删除竞赛     |
 
 ### 科研项目
 
@@ -368,6 +409,7 @@ enum NewsCategory {
 | `/projects/[id]` | 项目详情（含进展时间线）     |
 | `/news`          | 新闻动态列表                 |
 | `/news/[id]`     | 新闻详情                     |
+| `/competitions`  | 竞赛获奖（获奖结果筛选、分页） |
 | `/algorithms`    | 算法资源                     |
 | `/profile`       | 个人中心（需登录）           |
 | `/profile/submissions`     | 我的成果           |
@@ -397,6 +439,9 @@ enum NewsCategory {
 | `/admin/awards`                 | 获奖管理     |
 | `/admin/awards/new`             | 添加获奖     |
 | `/admin/awards/[id]/edit`       | 编辑获奖     |
+| `/admin/competitions`           | 竞赛管理     |
+| `/admin/competitions/new`       | 添加竞赛     |
+| `/admin/competitions/[id]/edit` | 编辑竞赛     |
 | `/admin/projects`               | 项目管理     |
 | `/admin/projects/new`           | 添加项目     |
 | `/admin/projects/[id]/edit`     | 编辑项目     |
@@ -449,6 +494,13 @@ enum NewsCategory {
 2. **硕士生** 按年级排序：研三 > 研二 > 研一
 3. **已毕业** 排最后
 
+年级不再手工维护：数据库只存 `enrollment_year`（入学年份），
+`src/lib/member-grade.ts` 按「9 月开学」的学年实时推算（入学当年为研一，满 3 年后不再显示年级，
+管理员把它改成「已毕业」即可）。没有填入学年份的历史数据会回退使用 `grade` 字段。
+
+「已毕业」成员**保留入学年份**（方便日后查档），只是不再展示「研几」——`resolveMemberGrade()`
+对非硕士生一律返回空年级；改为「老师」时才会清空学籍字段。
+
 ### 首次部署
 
 1. 注册第一个账号
@@ -460,80 +512,236 @@ UPDATE users SET status = 'APPROVED', role = 'SUPER_ADMIN' WHERE email = 'your@e
 
 3. 登录后台管理其他用户
 
-## 部署
+## 部署（阶段二：Docker Compose）
 
-### 腾讯云 Linux 服务器部署
+当前采用 Docker Compose 单容器部署，访问方式为 `http://你的域名:3000`，阶段三再切换为 HTTPS 纯域名。
 
-#### 1. 安装环境
+当前部署链路：
+
+```text
+浏览器
+  ↓
+域名:3000
+  ↓
+服务器 3000 端口
+  ↓
+chen-group-app 容器:3000
+  ↓
+Next.js 应用
+  ↓
+Prisma
+  ↓
+host.docker.internal:3306
+  ↓
+服务器已有 MySQL 容器
+  ↓
+group_website 数据库
+```
+
+### 涉及文件
+
+| 文件                | 说明                                                                 |
+| ------------------- | -------------------------------------------------------------------- |
+| `Dockerfile`      | 三阶段构建（deps → builder → runner），基于 `node:22-bookworm-slim`。各阶段安装 OpenSSL（Prisma 依赖），并切换清华镜像源加速 apt |
+| `docker-compose.yml` | 定义 `app` 服务：容器名 `chen-group-app`，加载 `.env.production`，映射 `3000:3000`，配置 `host.docker.internal:host-gateway` |
+| `.env.production` | 服务器生产环境变量（数据库连接、NextAuth 配置）。**不提交 Git、不进镜像** |
+| `deploy.sh`       | 一键更新脚本，保留在服务器项目目录，**不提交 Git**（完整内容见下文）  |
+
+### 首次部署
+
+前提条件：
+
+- 服务器已安装 Docker 与 Docker Compose
+- 服务器已有 MySQL 容器（3306 端口），且已创建 `group_website` 数据库（utf8mb4）
+- 域名已解析到服务器，防火墙/安全组放行 3000 端口
+
+#### 1. 准备项目目录
+
+不要混用 `sudo git clone` 和普通 `git pull`，先把目录授权给部署用户：
 
 ```bash
-# 安装 Node.js 18.x
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# 安装 PM2
-npm install -g pm2
-
-# 安装 Nginx
-sudo apt install nginx
+sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+cd /var/www
+git clone https://github.com/Sooonar/Chen-Research-Group.git
+cd Chen-Research-Group
 ```
 
-#### 2. 上传项目
+#### 2. 创建 .env.production
+
+```env
+NODE_ENV=production
+DATABASE_URL=mysql://chen_app:数据库密码@host.docker.internal:3306/group_website
+NEXTAUTH_SECRET=服务器上的随机密钥
+NEXTAUTH_URL=http://你的域名:3000
+```
+
+> 阶段二 `NEXTAUTH_URL` 需要带 `:3000` 端口；阶段三切换 HTTPS 后改为 `https://你的域名`。
+
+`.gitignore` 与 `.dockerignore` 已排除 `.env*`，环境变量文件不会被提交或打进镜像。
+
+#### 3. 创建 deploy.sh 并首次部署
+
+`deploy.sh` 不在仓库中，在服务器项目目录手动创建，内容如下（**注意保存为 LF 换行**）：
 
 ```bash
-# 将项目上传到服务器
-scp -r ./chen-group-website user@server:/var/www/
+#!/usr/bin/env bash
+set -euo pipefail
 
-# 或使用 Git
-git clone <repository-url> /var/www/chen-group-website
+APP_DIR="/var/www/Chen-Research-Group"
+BACKUP_ROOT="/var/www/backups/chen-group"
+APP_CONTAINER="chen-group-app"
+
+cd "$APP_DIR"
+
+echo "==> 当前版本"
+git status --short --branch
+
+echo "==> 拉取远端更新"
+git fetch origin
+
+BEFORE="$(git rev-parse HEAD)"
+git merge --ff-only origin/main
+AFTER="$(git rev-parse HEAD)"
+
+echo "==> 备份当前目录"
+mkdir -p "$BACKUP_ROOT"
+cp -a "$APP_DIR" "$BACKUP_ROOT/Chen-Research-Group-$(date +%F-%H%M%S)"
+
+echo "==> 检查是否更新 Prisma schema"
+PRISMA_CHANGED=0
+if [ "$BEFORE" != "$AFTER" ]; then
+  if git diff --name-only "$BEFORE" "$AFTER" | grep -q '^prisma/schema.prisma$'; then
+    PRISMA_CHANGED=1
+  fi
+fi
+
+echo "==> 构建并重启 Docker"
+docker compose up -d --build
+
+if [ "$PRISMA_CHANGED" = "1" ]; then
+  echo "==> 同步 Prisma 数据库结构"
+  docker compose run --rm app npx prisma db push
+  docker compose up -d --force-recreate
+fi
+
+echo "==> 查看容器状态"
+docker ps | grep "$APP_CONTAINER" || true
+
+echo "==> 最近日志"
+docker logs --tail=80 "$APP_CONTAINER"
+
+echo "==> 部署完成"
 ```
 
-#### 3. 安装依赖并构建
+执行：
 
 ```bash
-cd /var/www/chen-group-website
-npm install
-npx prisma generate
-npx prisma db push
-npm run build
+chmod +x deploy.sh
+bash deploy.sh
 ```
 
-#### 4. 配置环境变量
+### 日常更新
+
+服务器能访问 GitHub 时，最短流程：
 
 ```bash
-cp .env.example .env.production
-# 编辑 .env.production，配置生产环境数据库连接
+cd /var/www/Chen-Research-Group
+bash deploy.sh
 ```
 
-#### 5. 使用 PM2 启动
+脚本流程：查看 Git 状态 → `git fetch origin` → `git merge --ff-only origin/main` → 备份当前目录到 `/var/www/backups/chen-group/` → 检测 `prisma/schema.prisma` 是否变更 → `docker compose up -d --build` → 如 schema 有变更自动执行 `prisma db push` 并重建容器 → 输出容器状态和最近日志。
+
+不用脚本时的手动等价命令：
 
 ```bash
-pm2 start npm --name "chen-group-website" -- start
-pm2 save
-pm2 startup
+cd /var/www/Chen-Research-Group
+git fetch origin
+git merge --ff-only origin/main
+docker compose up -d --build
+docker logs --tail=100 chen-group-app
 ```
 
-#### 6. 配置 Nginx
+按变更内容选择命令：
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+| 场景                         | 命令                                         |
+| ---------------------------- | -------------------------------------------- |
+| 普通代码更新                 | `docker compose up -d --build`             |
+| 只改了 `.env.production`   | `docker compose up -d --force-recreate`    |
+| 代码和环境变量都改了         | `docker compose up -d --build --force-recreate` |
+| `prisma/schema.prisma` 有变更 | 见下节                                       |
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
+### Prisma schema 更新时
+
+`prisma db push` 只同步表结构，不创建数据库本身，也不负责插入初始数据：
 
 ```bash
-sudo systemctl restart nginx
+cd /var/www/Chen-Research-Group
+docker compose run --rm app npx prisma db push
+docker compose up -d --force-recreate
 ```
+
+`deploy.sh` 会在检测到 schema 变更时自动执行以上步骤。如果日志出现 `Unknown column` / `Table doesn't exist`，优先检查是否漏了这一步。
+
+### 注意事项
+
+- **通常不需要 `docker compose down`**：`up -d --build` 会自动重建镜像并重建容器，`down` 只会增加停机时间。
+- **切勿随手执行 `docker compose down -v`**：`-v` 会删除 Compose 管理的数据卷，可能造成数据丢失。
+- 只处理 `chen-group-app` 容器，不要动服务器上已有的 `mysql`、`redis`、`heatfront`、`heatend` 容器。
+- 没有确认和备份时不要执行：`git reset --hard origin/main`、`docker compose down -v`、`docker volume rm`、`sudo rm -rf /var/www/Chen-Research-Group`。
+
+### 常用检查命令
+
+```bash
+# 容器状态
+docker ps | grep chen-group-app
+
+# 最近日志
+docker logs --tail=100 chen-group-app
+
+# 端口监听（期望看到 0.0.0.0:3000，表示对公网开放）
+sudo ss -lntp | grep ':3000'
+
+# 检查数据库表
+docker exec -it mysql mysql -uroot -p
+# 进入后：USE group_website; SHOW TABLES;
+```
+
+### 常见部署问题
+
+**1. 拉取代码报 GnuTLS 错误**
+
+```text
+fatal: unable to access 'https://github.com/Sooonar/Chen-Research-Group.git':
+GnuTLS recv error (-110): The TLS connection was non-properly terminated.
+```
+
+通常是服务器访问 GitHub 的网络不稳定，可用 `curl -I https://github.com` 验证。可尝试强制 Git 使用 HTTP/1.1：
+
+```bash
+git config --global http.version HTTP/1.1
+```
+
+如果服务器长期访问 GitHub 不稳定，改用「本地上传版部署」：本地更新代码后通过 `scp`/`rsync` 上传到服务器，再执行 `docker compose up -d --build`。
+
+**2. git clone 报 Permission denied**
+
+当前用户没有 `/var/www` 写权限。按「首次部署」第 1 步执行 `chown` 授权；如果之前用 `sudo git clone` 生成过目录，用 `sudo chown -R $USER:$USER /var/www/Chen-Research-Group` 修正归属。
+
+**3. 执行 deploy.sh 报 `invalid option name: pipefail`**
+
+脚本是 Windows CRLF 换行导致（`pipefail` 后多了 `^M`）。在服务器上修复：
+
+```bash
+sed -i 's/\r$//' deploy.sh   # 或安装 dos2unix 后执行 dos2unix deploy.sh
+bash deploy.sh
+```
+
+避免复发：仓库中增加 `.gitattributes`（`*.sh text eol=lf`），或编辑 `.sh` 时保持 LF 换行。
+
+### 阶段三预告
+
+阶段三将切换为 `https://你的域名`：宿主机 Nginx 监听 80/443，本项目只绑定 `127.0.0.1:3000` 由 Nginx 反向代理，同时需要处理 `heatfront` 占用 80 端口的问题并申请 HTTPS 证书。建议先把阶段二的一键部署跑稳定，再规划阶段三。
 
 ## 开发规范
 
@@ -544,6 +752,7 @@ sudo systemctl restart nginx
 - 组件使用 PascalCase 命名
 - 文件使用 kebab-case 命名
 - API 返回统一格式：`{ data }` 或 `{ error }`
+- 列表分页统一使用 `src/lib/pagination.ts` 的公共约定和 `PageResult` 响应结构
 
 ### Git 提交规范
 
@@ -571,32 +780,33 @@ npx prisma generate       # 重新生成客户端
 ## 已完成功能
 
 - [x] 首页展示（课题组简介、团队卡片、成果统计、招生信息）
-- [x] 成员管理（CRUD、头像、分类筛选、自动排序）
+- [x] 成员管理（CRUD、头像上传与裁剪、分类筛选、自动排序）
+- [x] 列表分页（通用分页约定与组件，默认每页 10 条，成员页每页 9 条）
 - [x] 科研成果（论文、专利、软著、获奖）
 - [x] 科研项目（项目列表、详情、进展时间线、成果关联）
+- [x] 竞赛获奖展示（获奖结果筛选、分页）
 - [x] 新闻动态（分类筛选、富文本内容）
 - [x] 算法资源（展示、下载、使用说明）
 - [x] 管理后台（全部模块的 CRUD 操作）
 - [x] 用户注册审核机制（选择身份和年级）
-- [x] 审核通过自动创建成员记录
+- [x] 审核通过自动创建成员记录 + 用户/成员数据同步
 - [x] 角色权限系统（超级管理员/管理员/普通成员）
 - [x] 个人中心（查看/编辑个人信息、成员信息）
 - [x] 导航栏权限控制（根据角色显示/隐藏后台入口）
 - [x] 成员自主成果提交 + 审核流程
-- [x] 用户审核管理
-- [x] 成果审核管理
-- [x] 成员排序（老师 > 研三 > 研二 > 研一）
+- [x] 存量数据导入脚本（成员、项目、成果）
+- [x] Docker Compose 部署 + 一键部署脚本
 
 ## 待完成功能
 
 - [ ] 操作日志记录
-- [ ] 文件上传功能（头像、附件）
-- [ ] 批量导入论文
+- [ ] 附件上传（头像已支持，附件待做）
 - [ ] 富文本编辑器集成
 - [ ] 数据可视化图表
 - [ ] 响应式优化
+- [ ] 阶段三 HTTPS 部署（Nginx 反向代理 + 证书）
 
-## 常见问题
+## 常见问题（本地开发）
 
 ### MySQL 连接失败
 

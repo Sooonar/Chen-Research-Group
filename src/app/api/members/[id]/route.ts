@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  buildStudyPatch,
+  withComputedGrade,
+} from "@/lib/member-grade";
 
 // GET /api/members/[id] - 获取单个成员
 export async function GET(
@@ -19,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: "成员不存在" }, { status: 404 });
     }
 
-    return NextResponse.json(member);
+    return NextResponse.json(withComputedGrade(member));
   } catch (error) {
     console.error("Error fetching member:", error);
     return NextResponse.json({ error: "获取成员失败" }, { status: 500 });
@@ -34,13 +38,28 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, title, researchDirection, bio, email, displayOrder, isGraduated, graduationYear } = body;
+    const {
+      name,
+      title,
+      grade,
+      enrollmentYear,
+      researchDirection,
+      bio,
+      email,
+      displayOrder,
+      isGraduated,
+      graduationYear,
+    } = body;
+
+    // 年级 / 入学年份：留空（表单传 null）代表"不改"，具体规则见 buildStudyPatch
+    const gradePatch = buildStudyPatch({ title, grade, enrollmentYear });
 
     const member = await prisma.member.update({
       where: { id },
       data: {
         name,
         title,
+        ...gradePatch,
         researchDirection,
         bio,
         email,
@@ -50,7 +69,7 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(member);
+    return NextResponse.json(withComputedGrade(member));
   } catch (error) {
     console.error("Error updating member:", error);
     return NextResponse.json({ error: "更新成员失败" }, { status: 500 });

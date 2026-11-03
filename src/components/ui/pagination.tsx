@@ -37,7 +37,8 @@ function getPageItems(current: number, totalPages: number): PageItem[] {
 
 /**
  * 通用分页控件：显示总条数、页码，并允许浏览者调整每页显示条数。
- * 默认每页 10 条，可在 10 / 20 / 50 / 100 之间切换。
+ * 默认每页 10 条，可在 10 / 20 / 50 / 100 之间切换；
+ * 网格类页面（如团队成员按 3 列排布）可通过 `pageSizeOptions` 传入自定义选项。
  */
 export function Pagination({
   page,

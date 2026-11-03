@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { enrollmentYearFromGrade } from "@/lib/member-grade";
 
 // PUT /api/users/[id] - 更新用户信息（审核、角色分配）
 export async function PUT(
@@ -56,6 +57,8 @@ export async function PUT(
           name: targetUser.name,
           title: memberTitle,
           grade: memberTitle === "MASTER" ? targetUser.grade : null,
+          enrollmentYear:
+            memberTitle === "MASTER" ? enrollmentYearFromGrade(targetUser.grade) : null,
           email: targetUser.email,
           displayOrder: memberTitle === "TEACHER" ? 0 : (targetUser.grade || 1) * 10,
         },

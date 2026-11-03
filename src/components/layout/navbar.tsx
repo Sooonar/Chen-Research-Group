@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X, User, LogOut } from "lucide-react";
+import { useSiteName } from "@/lib/use-site-name";
 
 const navItems = [
   { label: "首页", href: "/" },
@@ -18,6 +19,7 @@ const navItems = [
 
 export function Navbar() {
   const { data: session } = useSession();
+  const siteName = useSiteName();
   const [isOpen, setIsOpen] = useState(false);
 
   const isAdmin =
@@ -28,8 +30,11 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 glass-card border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-xl font-bold gradient-text">
-            陈老师课题组
+          <Link
+            href="/"
+            className="text-xl font-bold gradient-text shrink-0 whitespace-nowrap"
+          >
+            {siteName}
           </Link>
 
           {/* Desktop nav */}

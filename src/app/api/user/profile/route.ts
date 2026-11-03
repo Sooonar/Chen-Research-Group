@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { buildStudyPatch, enrollmentYearFromGrade, toIntOrNull } from "@/lib/member-grade";
 
 // GET /api/user/profile - 获取当前用户信息
 export async function GET() {
@@ -43,7 +44,12 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { name, studentId, title, grade, researchDirection, bio } = body;
+    const { name, studentId, title, grade, enrollmentYear, researchDirection, bio } = body;
+
+    // 年级 / 入学年份：留空代表"不改"，规则见 buildStudyPatch
+    const gradeInput = toIntOrNull(grade);
+    const studyPatch = buildStudyPatch({ title, grade, enrollmentYear });
+    const derivedEnrollmentYear = toIntOrNull(enrollmentYear) ?? enrollmentYearFromGrade(gradeInput);
 
     // 更新用户基本信息
     const user = await prisma.user.update({
@@ -52,7 +58,7 @@ export async function PUT(request: Request) {
         name,
         studentId,
         title,
-        grade: grade ? parseInt(grade.toString()) : null,
+        grade: gradeInput,
       },
       include: {
         member: true,
@@ -66,7 +72,7 @@ export async function PUT(request: Request) {
         data: {
           name,
           title: title || user.member.title,
-          grade: title === "MASTER" ? (grade ? parseInt(grade.toString()) : user.member.grade) : null,
+          ...studyPatch,
           researchDirection,
           bio,
           email: user.email,
@@ -81,11 +87,12 @@ export async function PUT(request: Request) {
           userId: user.id,
           name,
           title: memberTitle,
-          grade: memberTitle === "MASTER" ? (grade ? parseInt(grade.toString()) : null) : null,
+          grade: memberTitle === "MASTER" ? gradeInput : null,
+          enrollmentYear: memberTitle === "MASTER" ? derivedEnrollmentYear : null,
           researchDirection,
           bio,
           email: user.email,
-          displayOrder: memberTitle === "TEACHER" ? 0 : (grade || 1) * 10,
+          displayOrder: memberTitle === "TEACHER" ? 0 : (gradeInput || 1) * 10,
         },
       });
     }

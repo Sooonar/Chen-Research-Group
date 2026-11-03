@@ -56,6 +56,7 @@ model Member {
   name              String
   title             MemberTitle
   grade             Int?      // 年级：1=研一, 2=研二, 3=研三（仅硕士生）
+  enrollmentYear    Int?      @map("enrollment_year") // 入学年份（如 2024），年级由它按学年推算
   researchDirection String?   @map("research_direction")
   bio               String?   @db.Text
   email             String?

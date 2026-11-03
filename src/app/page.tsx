@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 const defaultSiteConfig = {
-  lab_name: "陈老师课题组",
+  lab_name: "数智管网・建科新能",
   lab_subtitle: "致力于前沿科学研究，推动技术创新与突破",
   lab_description:
     "我们专注于人工智能、机器学习、计算机视觉等领域的研究工作，在顶级期刊和会议上发表了多篇高水平论文，培养了一批优秀的研究生人才。",

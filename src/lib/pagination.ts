@@ -4,6 +4,13 @@ export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
+/**
+ * 团队成员页按 3 列卡片网格展示，每页条数取 3 的倍数才能保证每行都是满的，
+ * 因此单独给这一页一套默认值和可选值（一页 3 行 = 9 人）。
+ */
+export const MEMBER_DEFAULT_PAGE_SIZE = 9;
+export const MEMBER_PAGE_SIZE_OPTIONS = [9, 18, 27, 45, 90];
+
 /** 分页接口的统一响应结构。 */
 export interface PageResult<T> {
   items: T[];
