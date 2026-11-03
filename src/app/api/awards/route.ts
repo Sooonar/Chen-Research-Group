@@ -3,6 +3,7 @@ import type { Award, Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
+import { toAwardCategory } from "@/lib/award-category";
 import {
   clampPage,
   getTotalPages,
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("search")?.trim() ?? "";
     const year = parseYear(searchParams.get("year"));
     const scope = searchParams.get("scope");
+    const category = searchParams.get("category");
 
     const conditions: Prisma.AwardWhereInput[] = [];
     if (search) {
@@ -64,6 +66,7 @@ export async function GET(request: Request) {
       });
     }
     if (year) conditions.push({ year });
+    if (category) conditions.push({ category: toAwardCategory(category) });
 
     // “我的”范围：只返回当前登录用户提交或参与的获奖。
     if (scope === "mine") {
@@ -175,13 +178,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, competition, level, winners, year, description, imageUrl } = body;
+    const { name, competition, category, winners, year, description, imageUrl } = body;
 
     const award = await prisma.award.create({
       data: {
         name,
         competition,
-        level,
+        category: toAwardCategory(category),
         winners,
         year: parseInt(year),
         description,

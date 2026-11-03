@@ -1,40 +1,34 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { usePaginatedList } from "@/lib/use-paginated-list";
+import { AWARD_CATEGORIES, awardCategoryLabels } from "@/lib/award-category";
 
 interface AwardRecord {
   id: string;
   name: string;
   competition: string;
-  level: string;
+  category: string;
   winners: string;
   year: number;
 }
 
-const levelMap: Record<string, string> = {
-  NATIONAL_FIRST: "国家级一等奖",
-  NATIONAL_SECOND: "国家级二等奖",
-  NATIONAL_THIRD: "国家级三等奖",
-  PROVINCIAL_FIRST: "省部级一等奖",
-  PROVINCIAL_SECOND: "省部级二等奖",
-  PROVINCIAL_THIRD: "省部级三等奖",
-  OTHER: "其他",
-};
-
-const levelColorMap: Record<string, string> = {
-  NATIONAL_FIRST: "bg-yellow-500/20 text-yellow-400",
-  NATIONAL_SECOND: "bg-orange-500/20 text-orange-400",
-  NATIONAL_THIRD: "bg-amber-500/20 text-amber-400",
-  PROVINCIAL_FIRST: "bg-blue-500/20 text-blue-400",
-  PROVINCIAL_SECOND: "bg-indigo-500/20 text-indigo-400",
-  PROVINCIAL_THIRD: "bg-purple-500/20 text-purple-400",
-  OTHER: "bg-gray-500/20 text-gray-400",
+const categoryColorMap: Record<string, string> = {
+  RESEARCH: "bg-blue-500/20 text-blue-400",
+  TEACHING: "bg-purple-500/20 text-purple-400",
+  COMPETITION: "bg-yellow-500/20 text-yellow-400",
+  ACADEMIC: "bg-green-500/20 text-green-400",
 };
 
 export default function AwardsManagementPage() {
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const query = useMemo(
+    () => ({ category: categoryFilter || undefined }),
+    [categoryFilter]
+  );
   const {
     items: awards,
     total,
@@ -44,8 +38,14 @@ export default function AwardsManagementPage() {
     loading,
     setPage,
     changePageSize,
+    resetPage,
     refresh,
-  } = usePaginatedList<AwardRecord>("/api/awards");
+  } = usePaginatedList<AwardRecord>("/api/awards", query);
+
+  function handleCategoryFilter(value: string) {
+    setCategoryFilter(value);
+    resetPage();
+  }
 
   async function handleDelete(id: string) {
     if (!confirm("确定要删除此获奖记录吗？")) return;
@@ -88,6 +88,22 @@ export default function AwardsManagementPage() {
           </Link>
         </div>
 
+        <div className="flex items-center gap-3 mb-4">
+          <select
+            value={categoryFilter}
+            onChange={(e) => handleCategoryFilter(e.target.value)}
+            className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="按分类筛选"
+          >
+            <option value="">全部分类</option>
+            {AWARD_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {awardCategoryLabels[category]}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {loading && awards.length === 0 ? (
           <div className="text-center text-gray-400">加载中...</div>
         ) : awards.length === 0 ? (
@@ -107,8 +123,8 @@ export default function AwardsManagementPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-left p-4 text-gray-400 font-medium">获奖名称</th>
+                    <th className="text-left p-4 text-gray-400 font-medium">分类</th>
                     <th className="text-left p-4 text-gray-400 font-medium">赛事</th>
-                    <th className="text-left p-4 text-gray-400 font-medium">等级</th>
                     <th className="text-left p-4 text-gray-400 font-medium">获奖成员</th>
                     <th className="text-left p-4 text-gray-400 font-medium">年份</th>
                     <th className="text-right p-4 text-gray-400 font-medium">操作</th>
@@ -118,16 +134,20 @@ export default function AwardsManagementPage() {
                   {awards.map((award) => (
                     <tr key={award.id} className="border-b border-white/5 hover:bg-white/5">
                       <td className="p-4 font-medium">{award.name}</td>
-                      <td className="p-4 text-gray-300">{award.competition}</td>
                       <td className="p-4">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            levelColorMap[award.level] || "bg-gray-500/20 text-gray-400"
+                            categoryColorMap[award.category] || "bg-gray-500/20 text-gray-400"
                           }`}
                         >
-                          {levelMap[award.level] || award.level}
+                          {award.category
+                            ? awardCategoryLabels[
+                                award.category as keyof typeof awardCategoryLabels
+                              ] || award.category
+                            : "未分类"}
                         </span>
                       </td>
+                      <td className="p-4 text-gray-300">{award.competition}</td>
                       <td className="p-4 text-gray-400 text-sm max-w-xs truncate">
                         {award.winners}
                       </td>

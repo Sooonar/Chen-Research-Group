@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Lock } from "lucide-react";
 import Link from "next/link";
 
-export default function LoginPage() {
+/** 只允许站内相对路径，防开放重定向。 */
+function safeCallbackUrl(value: string | null): string {
+  if (value && value.startsWith("/") && !value.startsWith("//")) {
+    return value;
+  }
+  return "/admin";
+}
+
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +38,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError("邮箱或密码错误，或账号未通过审核");
       } else {
-        router.push("/admin");
+        router.push(safeCallbackUrl(searchParams.get("callbackUrl")));
       }
     } catch {
       setError("登录失败，请重试");
@@ -44,8 +54,8 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mx-auto mb-4 flex items-center justify-center">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">管理后台</h1>
-          <p className="text-gray-400 mt-2">请登录您的账号</p>
+          <h1 className="text-2xl font-bold">登录</h1>
+          <p className="text-gray-400 mt-2">登录后浏览课题组各模块内容</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -108,5 +118,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-gray-400">
+          加载中...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

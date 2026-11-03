@@ -10,6 +10,12 @@ export const MASTER_PROGRAM_YEARS = 3;
 /** 学年起始月份（9 月开学）。 */
 export const ACADEMIC_YEAR_START_MONTH = 9;
 
+/** 入学年份最多可以选到「当前学年 + N」，留给提前拿到录取通知的新生注册。 */
+export const MAX_FUTURE_ENROLLMENT_YEARS = 2;
+
+/** 入学年份的下限：固定 2000（不随学年浮动，否则老校友以后就选不到了）。 */
+export const MIN_ENROLLMENT_YEAR = 2000;
+
 export const gradeLabels: Record<number, string> = {
   1: "研一",
   2: "研二",
@@ -89,6 +95,58 @@ export function buildStudyPatch(input: {
     return { grade, enrollmentYear: enrollmentYearFromGrade(grade) };
   }
   return {};
+}
+
+/** 与 Prisma 的 MemberTitle 枚举一致（没有 PHD）。 */
+export type MemberTitleLike = "TEACHER" | "MASTER" | "ALUMNI";
+
+/**
+ * 按入学年份自动判定身份：
+ * - 选了未来年份 → 仍是硕士生（预入学，年级为空）；
+ * - 入学超过学制 → 自动算「已毕业」（ALUMNI）；
+ * - 其他不变（老师、博士生、已毕业保持原样）。
+ * 注册、审核、个人中心保存时都用它，避免"毕业多年还挂研三"。
+ */
+export function resolveTitleForEnrollment(
+  title: MemberTitleLike | null | undefined,
+  enrollmentYear: number | null | undefined,
+  date: Date = new Date()
+): MemberTitleLike {
+  const current = title ?? "MASTER";
+  if (current !== "MASTER" || !enrollmentYear) return current;
+
+  const academicYear = getAcademicYear(date);
+  if (enrollmentYear > academicYear) return current; // 预入学，还没到入学学年
+  if (academicYear - enrollmentYear + 1 > MASTER_PROGRAM_YEARS) return "ALUMNI";
+  return current;
+}
+
+export interface MemberStudyFields {
+  title: MemberTitleLike;
+  grade: number | null;
+  enrollmentYear: number | null;
+}
+
+/**
+ * 由「注册身份 + 年级 / 入学年份」推导出成员应存的 title / grade / enrollmentYear。
+ * 用于审核通过、账号同步、个人中心保存等"从账号落到档案"的场景。
+ */
+export function deriveMemberStudyFields(
+  input: { title?: string | null; grade?: number | null; enrollmentYear?: number | null },
+  date: Date = new Date()
+): MemberStudyFields {
+  const enrollmentYear = input.enrollmentYear ?? enrollmentYearFromGrade(input.grade, date);
+  const title = resolveTitleForEnrollment(
+    (input.title ?? "MASTER") as MemberTitleLike,
+    enrollmentYear,
+    date
+  );
+
+  return {
+    title,
+    grade: title === "MASTER" ? deriveGrade(enrollmentYear, date) : null,
+    enrollmentYear: title === "TEACHER" ? null : enrollmentYear,
+  };
 }
 
 export interface MemberGradeSource {

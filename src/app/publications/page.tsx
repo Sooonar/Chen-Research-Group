@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Award, Code, ExternalLink, Search } from "lucide-react";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -40,19 +39,7 @@ interface Copyright {
   submittedBy: string | null;
 }
 
-interface AwardRecord {
-  id: string;
-  name: string;
-  competition: string;
-  level: string;
-  winners: string;
-  year: number;
-  description: string | null;
-  imageUrl: string | null;
-  submittedBy: string | null;
-}
-
-type PublicationItem = Paper | Patent | Copyright | AwardRecord;
+type PublicationItem = Paper | Patent | Copyright;
 
 const patentTypeMap: Record<string, string> = {
   INVENTION: "发明专利",
@@ -65,39 +52,25 @@ const patentStatusMap: Record<string, string> = {
   AUTHORIZED: "已授权",
 };
 
-const awardLevelMap: Record<string, string> = {
-  NATIONAL_FIRST: "国家级一等奖",
-  NATIONAL_SECOND: "国家级二等奖",
-  NATIONAL_THIRD: "国家级三等奖",
-  PROVINCIAL_FIRST: "省部级一等奖",
-  PROVINCIAL_SECOND: "省部级二等奖",
-  PROVINCIAL_THIRD: "省部级三等奖",
-  OTHER: "其他",
-};
-
-type TabType = "papers" | "patents" | "copyrights" | "awards";
-type AwardScope = "all" | "classmates" | "mine";
+type TabType = "papers" | "patents" | "copyrights";
 
 const TAB_ENDPOINTS: Record<TabType, string> = {
   papers: "/api/papers",
   patents: "/api/patents",
   copyrights: "/api/copyrights",
-  awards: "/api/awards",
 };
 
-const TAB_ORDER: TabType[] = ["papers", "patents", "copyrights", "awards"];
+const TAB_ORDER: TabType[] = ["papers", "patents", "copyrights"];
 
 function PublicationsContent() {
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab");
   const initialTab: TabType =
-    queryTab === "papers" || queryTab === "patents" || queryTab === "copyrights" || queryTab === "awards"
+    queryTab === "papers" || queryTab === "patents" || queryTab === "copyrights"
       ? queryTab
       : "papers";
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-  const [awardScope, setAwardScope] = useState<AwardScope>("all");
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -105,16 +78,14 @@ function PublicationsContent() {
     papers: 0,
     patents: 0,
     copyrights: 0,
-    awards: 0,
   });
 
   const query = useMemo(
     () => ({
       search: debouncedSearch || undefined,
       year: selectedYear === "all" ? undefined : selectedYear,
-      scope: activeTab === "awards" ? awardScope : undefined,
     }),
-    [debouncedSearch, selectedYear, activeTab, awardScope]
+    [debouncedSearch, selectedYear]
   );
 
   const list = usePaginatedList<PublicationItem>(TAB_ENDPOINTS[activeTab], query);
@@ -163,12 +134,10 @@ function PublicationsContent() {
     if (
       queryTab === "papers" ||
       queryTab === "patents" ||
-      queryTab === "copyrights" ||
-      queryTab === "awards"
+      queryTab === "copyrights"
     ) {
       const timer = window.setTimeout(() => {
         setActiveTab(queryTab);
-        setAwardScope("all");
         setSelectedYear("all");
         setSearch("");
         setDebouncedSearch("");
@@ -181,30 +150,21 @@ function PublicationsContent() {
   const handleTabChange = (tab: TabType) => {
     if (tab === activeTab) return;
     setActiveTab(tab);
-    setAwardScope("all");
     setSelectedYear("all");
     setSearch("");
     setDebouncedSearch("");
     resetPage();
   };
 
-  const handleScopeChange = (scope: AwardScope) => {
-    setAwardScope(scope);
-    resetPage();
-  };
-
-  const currentUser = session?.user;
   const years = list.years;
   const papers = list.items as Paper[];
   const patents = list.items as Patent[];
   const copyrights = list.items as Copyright[];
-  const awards = list.items as AwardRecord[];
 
   const tabs = [
     { id: "papers" as TabType, label: "学术论文", icon: FileText, count: counts.papers },
     { id: "patents" as TabType, label: "专利", icon: Award, count: counts.patents },
     { id: "copyrights" as TabType, label: "软件著作权", icon: Code, count: counts.copyrights },
-    { id: "awards" as TabType, label: "获奖", icon: Award, count: counts.awards },
   ];
 
   const loadingInitial = list.loading && list.items.length === 0;
@@ -420,82 +380,6 @@ function PublicationsContent() {
                     </div>
                   ))}
 
-                {/* Awards */}
-                {activeTab === "awards" && (
-                  <div>
-                    <div className="flex justify-center gap-3 mb-8">
-                      <button
-                        onClick={() => handleScopeChange("all")}
-                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                          awardScope === "all"
-                            ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                            : "bg-white/5 text-gray-400 hover:bg-white/10"
-                        }`}
-                      >
-                        全部
-                      </button>
-                      <button
-                        onClick={() => handleScopeChange("classmates")}
-                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                          awardScope === "classmates"
-                            ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                            : "bg-white/5 text-gray-400 hover:bg-white/10"
-                        }`}
-                      >
-                        同学
-                      </button>
-                      <button
-                        onClick={() => handleScopeChange("mine")}
-                        className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                          awardScope === "mine"
-                            ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                            : "bg-white/5 text-gray-400 hover:bg-white/10"
-                        }`}
-                      >
-                        我的
-                      </button>
-                    </div>
-
-                    {awardScope === "mine" && !currentUser ? (
-                      <div className="glass-card p-8 text-center text-gray-400">
-                        登录后查看我的获奖记录
-                      </div>
-                    ) : awards.length === 0 ? (
-                      <div className="glass-card p-8 text-center text-gray-400">
-                        暂无获奖记录
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {awards.map((award, index) => (
-                          <motion.div
-                            key={award.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: Math.min(index, 9) * 0.05 }}
-                            className="glass-card p-6"
-                          >
-                            <div className="flex items-start justify-between gap-4 mb-3">
-                              <div>
-                                <h3 className="font-semibold">{award.name}</h3>
-                                <p className="text-sm text-gray-400 mt-1">{award.competition}</p>
-                              </div>
-                              <span className="text-sm text-gray-500">{award.year}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2 text-sm mb-3">
-                              <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400">
-                                {awardLevelMap[award.level] || award.level}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-400">获奖成员：{award.winners}</p>
-                            {award.description && (
-                              <p className="text-sm text-gray-500 mt-3">{award.description}</p>
-                            )}
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               <Pagination

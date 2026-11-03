@@ -6,12 +6,16 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Award, Code, Trophy } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import {
+  AWARD_CATEGORIES,
+  awardCategoryLabels,
+} from "@/lib/award-category";
 
 const submissionTypes = [
   { id: "PUBLICATION", label: "论文", icon: FileText, description: "学术论文、期刊文章" },
   { id: "PATENT", label: "专利", icon: Award, description: "发明专利、实用新型" },
   { id: "COPYRIGHT", label: "软件著作权", icon: Code, description: "软件著作权登记" },
-  { id: "AWARD", label: "获奖", icon: Trophy, description: "竞赛获奖、学术奖励" },
+  { id: "AWARD", label: "获奖", icon: Trophy, description: "科研/教学/竞赛/学业获奖" },
 ];
 
 export default function NewSubmissionPage() {
@@ -278,6 +282,22 @@ export default function NewSubmissionPage() {
           <>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
+                获奖分类 <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={form.category || "RESEARCH"}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              >
+                {AWARD_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {awardCategoryLabels[category]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 获奖名称 <span className="text-red-400">*</span>
               </label>
               <input
@@ -300,37 +320,17 @@ export default function NewSubmissionPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  获奖等级 <span className="text-red-400">*</span>
-                </label>
-                <select
-                  value={form.level || "OTHER"}
-                  onChange={(e) => setForm({ ...form, level: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                >
-                  <option value="NATIONAL_FIRST">国家级一等奖</option>
-                  <option value="NATIONAL_SECOND">国家级二等奖</option>
-                  <option value="NATIONAL_THIRD">国家级三等奖</option>
-                  <option value="PROVINCIAL_FIRST">省部级一等奖</option>
-                  <option value="PROVINCIAL_SECOND">省部级二等奖</option>
-                  <option value="PROVINCIAL_THIRD">省部级三等奖</option>
-                  <option value="OTHER">其他</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  获奖年份 <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="number"
-                  value={form.year || ""}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                获奖年份 <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                value={form.year || ""}
+                onChange={(e) => setForm({ ...form, year: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">

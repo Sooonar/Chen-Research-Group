@@ -4,8 +4,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import Link from "next/link";
+import {
+  deriveGrade,
+  getAcademicYear,
+  gradeLabels,
+  MAX_FUTURE_ENROLLMENT_YEARS,
+  MIN_ENROLLMENT_YEAR,
+} from "@/lib/member-grade";
 
 export default function RegisterPage() {
+  const currentAcademicYear = getAcademicYear();
+  // 下限固定 2000（不随学年浮动），上限 = 当前学年 + 2（预入学），每年 9 月自动后移
+  const minYear = MIN_ENROLLMENT_YEAR;
+  const maxYear = currentAcademicYear + MAX_FUTURE_ENROLLMENT_YEARS;
+  const enrollmentYearOptions = Array.from(
+    { length: maxYear - minYear + 1 },
+    (_, index) => {
+      const year = maxYear - index;
+      return { year, grade: deriveGrade(year) };
+    }
+  );
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -13,8 +32,14 @@ export default function RegisterPage() {
     confirmPassword: "",
     studentId: "",
     title: "MASTER",
-    grade: "1",
+    enrollmentYear: "",
   });
+
+  const selectedYear = Number.parseInt(form.enrollmentYear, 10);
+  const hasYearInput = Number.isFinite(selectedYear);
+  const selectedGrade =
+    form.title === "TEACHER" || !hasYearInput ? null : deriveGrade(selectedYear);
+  const isFutureEnrollment = hasYearInput && selectedYear > currentAcademicYear;
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +57,12 @@ export default function RegisterPage() {
       return;
     }
 
+    if (form.title === "MASTER" && !hasYearInput) {
+      setError("请选择入学年份");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -42,7 +73,8 @@ export default function RegisterPage() {
           password: form.password,
           studentId: form.studentId,
           title: form.title,
-          grade: form.title === "MASTER" ? parseInt(form.grade) : null,
+          enrollmentYear:
+            form.title === "MASTER" && hasYearInput ? selectedYear : null,
         }),
       });
 
@@ -101,22 +133,39 @@ export default function RegisterPage() {
               <option value="TEACHER">老师</option>
               <option value="MASTER">硕士生</option>
             </select>
+            <p className="mt-2 text-xs text-gray-500">
+              入学年份超过 3 年会被自动记为「已毕业」，无需自己选身份
+            </p>
           </div>
 
           {form.title === "MASTER" && (
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                年级 <span className="text-red-400">*</span>
+                入学年份 <span className="text-red-400">*</span>
               </label>
               <select
-                value={form.grade}
-                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                value={form.enrollmentYear}
+                onChange={(e) => setForm({ ...form, enrollmentYear: e.target.value })}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
               >
-                <option value="1">研一</option>
-                <option value="2">研二</option>
-                <option value="3">研三</option>
+                <option value="">— 请选择 —</option>
+                {enrollmentYearOptions.map((option) => (
+                  <option key={option.year} value={option.year}>
+                    {option.year} 年
+                    {option.grade ? `（${gradeLabels[option.grade]}）` : ""}
+                    {option.year > currentAcademicYear ? "（预入学）" : ""}
+                  </option>
+                ))}
               </select>
+              <p className="mt-2 text-xs text-gray-500">
+                {!hasYearInput
+                  ? "选择入学年份即可，年级和是否毕业由后台自动判定"
+                  : isFutureEnrollment
+                    ? `预计 ${selectedYear} 级，到 ${selectedYear} 年 9 月自动显示为「研一」`
+                    : selectedGrade
+                      ? `按当前（${currentAcademicYear}）学年显示为「${gradeLabels[selectedGrade]}」`
+                      : "该年份已超过 3 年学制，提交后将自动记为「已毕业」（保留入学年份供查档）"}
+              </p>
             </div>
           )}
 

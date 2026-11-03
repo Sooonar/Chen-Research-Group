@@ -33,12 +33,12 @@ Chen-Research-Group/
 │   │   ├── members/           # 成员页面
 │   │   │   ├── page.tsx       # 成员列表
 │   │   │   └── [id]/page.tsx  # 成员详情
-│   │   ├── publications/      # 科研成果页面
+│   │   ├── publications/      # 科研成果页面（论文/专利/软著）
+│   │   ├── awards/            # 获奖页面（科研/教学/竞赛/学业四分类）
 │   │   ├── projects/          # 科研项目页面
 │   │   │   ├── page.tsx       # 项目列表
 │   │   │   └── [id]/page.tsx  # 项目详情
 │   │   ├── news/              # 新闻动态页面
-│   │   ├── competitions/      # 竞赛获奖页面
 │   │   ├── algorithms/        # 算法资源页面
 │   │   ├── profile/           # 个人中心
 │   │   │   ├── page.tsx       # 个人资料
@@ -54,7 +54,6 @@ Chen-Research-Group/
 │   │   │   ├── patents/       # 专利管理
 │   │   │   ├── copyrights/    # 软著管理
 │   │   │   ├── awards/        # 获奖管理
-│   │   │   ├── competitions/  # 竞赛管理
 │   │   │   ├── projects/      # 项目管理
 │   │   │   ├── news/          # 新闻管理
 │   │   │   ├── algorithms/    # 算法管理
@@ -69,7 +68,6 @@ Chen-Research-Group/
 │   │       ├── patents/       # 专利 API
 │   │       ├── copyrights/    # 软著 API
 │   │       ├── awards/        # 获奖 API
-│   │       ├── competitions/  # 竞赛 API
 │   │       ├── projects/      # 项目 API
 │   │       ├── news/          # 新闻 API
 │   │       ├── algorithms/    # 算法 API
@@ -178,8 +176,8 @@ node scripts/import-existing-data.cjs <json-path> [--dry-run]
 | `publications`        | 论文                             |
 | `patents`             | 专利                             |
 | `software_copyrights` | 软件著作权                       |
-| `awards`              | 获奖记录                         |
-| `competitions`        | 竞赛获奖记录                     |
+| `awards`              | 获奖记录（含 category 四分类）   |
+| `competitions`        | 竞赛记录（模块已下线，表保留存档） |
 | `algorithms`          | 算法资源                         |
 | `projects`            | 科研项目                         |
 | `project_progress`    | 项目进展                         |
@@ -230,6 +228,13 @@ enum CompetitionResult {
   NOT_WON      // 未胜出
 }
 
+enum AwardCategory {
+  RESEARCH     // 科研获奖
+  TEACHING     // 教学获奖
+  COMPETITION  // 竞赛获奖
+  ACADEMIC     // 学业获奖
+}
+
 enum NewsCategory {
   GROUP        // 组内新闻
   ACADEMIC     // 学术动态
@@ -247,8 +252,14 @@ enum NewsCategory {
 | `title`         | MemberTitle | 职称（TEACHER/MASTER/ALUMNI）         |
 | `grade`         | Int?        | 年级（1=研一, 2=研二, 3=研三，仅硕士生）<br>由入学年份推算后回写，仅作冗余 |
 | `enrollmentYear`| Int?        | 入学年份（如 2024）。年级由此按学年实时推算，每年 9 月自动升级 |
+| `studentNo`     | String?     | 学号（从 bio 拆出，也会与 `users.studentId` 同步） |
+| `phone`         | String?     | 手机号（从 bio 拆出）                 |
+| `department`    | String?     | 院系（从 bio 拆出）                   |
+| `major`         | String?     | 专业（从 bio 拆出）                   |
+| `programType`   | String?     | 学生类别（从 bio 拆出，如「全日制学术学位硕士」） |
+| `thesisTitle`   | String?     | 论文题目（从 bio 拆出）               |
 | `researchDirection` | String?   | 研究方向                              |
-| `bio`           | String?     | 个人简介（一行档案：院系/专业/学生类别/学号/手机/论文题目/入学日期，展示在成员详情页） |
+| `bio`           | String?     | 个人简介（历史数据的档案文本仍保留在这里，可自行精简） |
 | `email`         | String?     | 邮箱                                  |
 | `avatarUrl`     | String?     | 头像 URL                              |
 | `displayOrder`  | Int         | 排序权重                              |
@@ -339,23 +350,17 @@ enum NewsCategory {
 
 ### 获奖记录
 
-| 方法   | 路径                 | 说明         |
-| ------ | -------------------- | ------------ |
-| GET    | `/api/awards`      | 获取获奖列表 |
-| POST   | `/api/awards`      | 创建获奖     |
-| GET    | `/api/awards/[id]` | 获取单个获奖 |
-| PUT    | `/api/awards/[id]` | 更新获奖     |
-| DELETE | `/api/awards/[id]` | 删除获奖     |
+| 方法   | 路径                 | 说明                                       |
+| ------ | -------------------- | ------------------------------------------ |
+| GET    | `/api/awards`      | 获取获奖列表（支持 `?category=` 分类筛选） |
+| POST   | `/api/awards`      | 创建获奖                                   |
+| GET    | `/api/awards/[id]` | 获取单个获奖                               |
+| PUT    | `/api/awards/[id]` | 更新获奖                                   |
+| DELETE | `/api/awards/[id]` | 删除获奖                                   |
 
-### 竞赛记录
-
-| 方法   | 路径                       | 说明         |
-| ------ | -------------------------- | ------------ |
-| GET    | `/api/competitions`      | 获取竞赛列表（支持 `result` 筛选） |
-| POST   | `/api/competitions`      | 创建竞赛     |
-| GET    | `/api/competitions/[id]` | 获取单条竞赛 |
-| PUT    | `/api/competitions/[id]` | 更新竞赛     |
-| DELETE | `/api/competitions/[id]` | 删除竞赛     |
+> 竞赛记录 API（`/api/competitions`）已随竞赛模块下线移除；`competitions`
+> 表保留存档，历史「未获奖」参赛记录已通过 `scripts/backfill-award-category.sql`
+> 转入 `awards`（竞赛获奖分类）。
 
 ### 科研项目
 
@@ -399,19 +404,23 @@ enum NewsCategory {
 
 ### 访客端
 
+除首页外的所有页面均需登录（`src/middleware.ts` 统一门禁，未登录重定向到
+`/admin/login?callbackUrl=原路径`，登录后回跳原页面）；未登录状态下导航栏
+只显示「首页」和「登录」。
+
 | 路径               | 说明                         |
 | ------------------ | ---------------------------- |
 | `/`              | 首页                         |
 | `/members`       | 成员列表                     |
 | `/members/[id]`  | 成员详情                     |
 | `/publications`  | 科研成果（论文、专利、软著） |
+| `/awards`        | 获奖荣誉（科研/教学/竞赛/学业四分类） |
 | `/projects`      | 科研项目列表                 |
 | `/projects/[id]` | 项目详情（含进展时间线）     |
 | `/news`          | 新闻动态列表                 |
 | `/news/[id]`     | 新闻详情                     |
-| `/competitions`  | 竞赛获奖（获奖结果筛选、分页） |
 | `/algorithms`    | 算法资源                     |
-| `/profile`       | 个人中心（需登录）           |
+| `/profile`       | 个人中心                     |
 | `/profile/submissions`     | 我的成果           |
 | `/profile/submissions/new` | 提交新成果         |
 
@@ -439,9 +448,6 @@ enum NewsCategory {
 | `/admin/awards`                 | 获奖管理     |
 | `/admin/awards/new`             | 添加获奖     |
 | `/admin/awards/[id]/edit`       | 编辑获奖     |
-| `/admin/competitions`           | 竞赛管理     |
-| `/admin/competitions/new`       | 添加竞赛     |
-| `/admin/competitions/[id]/edit` | 编辑竞赛     |
 | `/admin/projects`               | 项目管理     |
 | `/admin/projects/new`           | 添加项目     |
 | `/admin/projects/[id]/edit`     | 编辑项目     |
@@ -473,7 +479,12 @@ enum NewsCategory {
 ### 注册流程
 
 1. 用户访问 `/admin/register` 注册
-2. 选择身份（老师/硕士生）和年级（研一/研二/研三）
+2. 选择身份（**只有老师 / 硕士生**）和**入学年份**（下拉：下限固定 **2000 年**，
+   上限 = 当前学年 + 2，每年 9 月只后移上限，老校友永远能选到 2000），
+   年级和「是否已毕业」都由后台按学年自动判定（不再手选「研几」「已毕业」）：
+   - 在读年份按学年显示研一 / 研二 / 研三
+   - 入学超过 3 年学制 → **自动记为「已毕业」**（保留入学年份供查档）
+   - 未来年份（如 2027）→ 记为「预入学」，`grade` 留空，到该学年 9 月自动变成研一
 3. 默认状态为 `PENDING`（待审核）
 4. 管理员在「用户审核」页面审核通过
 5. **系统自动创建成员记录**，同步用户信息
@@ -500,6 +511,21 @@ enum NewsCategory {
 
 「已毕业」成员**保留入学年份**（方便日后查档），只是不再展示「研几」——`resolveMemberGrade()`
 对非硕士生一律返回空年级；改为「老师」时才会清空学籍字段。
+
+学籍类字段（学号/手机/院系/专业/学生类别/论文题目）已从 `bio` 拆成独立列，历史数据用
+`scripts/backfill-enrollment-year.sql`（入学年份）和 `scripts/backfill-member-profile.sql`
+（其余六项，从 bio 里按「院系：…；学号：…」格式解析）回填，两个脚本都是幂等的。
+
+### 获奖分类与竞赛模块下线
+
+获奖记录分四类：**科研获奖 / 教学获奖 / 竞赛获奖 / 学业获奖**（`awards.category`，
+枚举定义见上）。前台独立的「获奖」页 `/awards` 按分类筛选，`/publications`
+只保留论文/专利/软著三个 tab。
+
+竞赛模块（前台页、管理页、API）已下线，`competitions` 表保留存档。历史获奖数据
+用 `scripts/backfill-award-category.sql` 回填（幂等）：存量 86 条按证书来源分类
+（教学 42 / 竞赛 38 / 科研 5 / 学业 1），并把 2 条「未获奖」竞赛参赛记录转入
+竞赛获奖。部署时先 `npx prisma db push` 加列，再执行该脚本。
 
 ### 首次部署
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toAwardCategory } from "@/lib/award-category";
 
 // GET /api/awards/[id]
 export async function GET(
@@ -29,14 +30,14 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, competition, level, winners, year, description, imageUrl } = body;
+    const { name, competition, category, winners, year, description, imageUrl } = body;
 
     const award = await prisma.award.update({
       where: { id },
       data: {
         name,
         competition,
-        level,
+        category: toAwardCategory(category),
         winners,
         year: parseInt(year),
         description,

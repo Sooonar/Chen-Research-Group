@@ -8,6 +8,7 @@ import { User, Mail, CreditCard, Shield, Clock, FileText, Plus, BookOpen } from 
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { AvatarUpload } from "@/components/upload/avatar-upload";
+import { deriveGrade, getAcademicYear, gradeLabels, MAX_FUTURE_ENROLLMENT_YEARS, MIN_ENROLLMENT_YEAR } from "@/lib/member-grade";
 
 interface UserProfile {
   id: string;
@@ -16,6 +17,7 @@ interface UserProfile {
   studentId: string | null;
   title: string | null;
   grade: number | null;
+  enrollmentYear: number | null;
   role: string;
   status: string;
   avatarUrl: string | null;
@@ -25,6 +27,13 @@ interface UserProfile {
     name: string;
     title: string;
     grade: number | null;
+    enrollmentYear: number | null;
+    studentNo: string | null;
+    phone: string | null;
+    department: string | null;
+    major: string | null;
+    programType: string | null;
+    thesisTitle: string | null;
     researchDirection: string | null;
     bio: string | null;
     avatarUrl: string | null;
@@ -77,15 +86,30 @@ export default function ProfilePage() {
     name: "",
     studentId: "",
     title: "",
-    grade: "",
+    enrollmentYear: "",
   });
   const [memberForm, setMemberForm] = useState({
     title: "",
-    grade: "",
+    enrollmentYear: "",
+    phone: "",
+    department: "",
+    major: "",
+    programType: "",
+    thesisTitle: "",
     researchDirection: "",
     bio: "",
   });
   const [saving, setSaving] = useState(false);
+
+  // 入学年份下拉：下限固定 2000，上限 = 当前学年 + 2（预入学）
+  const currentAcademicYear = getAcademicYear();
+  const maxEnrollmentYear = currentAcademicYear + MAX_FUTURE_ENROLLMENT_YEARS;
+  const minEnrollmentYear = MIN_ENROLLMENT_YEAR;
+  const enrollmentYearOptions = Array.from(
+    { length: maxEnrollmentYear - minEnrollmentYear + 1 },
+    (_, index) => maxEnrollmentYear - index
+  );
+  const formGrade = form.enrollmentYear ? deriveGrade(parseInt(form.enrollmentYear)) : null;
 
   useEffect(() => {
     async function fetchProfile() {
@@ -98,11 +122,18 @@ export default function ProfilePage() {
             name: data.name || "",
             studentId: data.studentId || "",
             title: data.title || "MASTER",
-            grade: data.grade?.toString() || "1",
+            enrollmentYear:
+              (data.enrollmentYear ?? data.member?.enrollmentYear)?.toString() || "",
           });
           setMemberForm({
             title: data.member?.title || data.title || "MASTER",
-            grade: (data.member?.grade || data.grade)?.toString() || "1",
+            enrollmentYear:
+              (data.member?.enrollmentYear ?? data.enrollmentYear)?.toString() || "",
+            phone: data.member?.phone || "",
+            department: data.member?.department || "",
+            major: data.member?.major || "",
+            programType: data.member?.programType || "",
+            thesisTitle: data.member?.thesisTitle || "",
             researchDirection: data.member?.researchDirection || "",
             bio: data.member?.bio || "",
           });
@@ -155,7 +186,6 @@ export default function ProfilePage() {
           name: profile?.name,
           studentId: profile?.studentId,
           ...memberForm,
-          grade: memberForm.grade ? parseInt(memberForm.grade) : null,
         }),
       });
 
@@ -337,21 +367,32 @@ export default function ProfilePage() {
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                       >
                         <option value="TEACHER">老师</option>
-                        <option value="MASTER">硕士生</option>
+                        <option value="MASTER">硕士生（在读）</option>
+                        <option value="ALUMNI">已毕业（校友）</option>
                       </select>
                     </div>
-                    {form.title === "MASTER" && (
+                    {form.title !== "TEACHER" && (
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">年级</label>
+                        <label className="block text-sm text-gray-400 mb-1">入学年份</label>
                         <select
-                          value={form.grade}
-                          onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                          value={form.enrollmentYear}
+                          onChange={(e) => setForm({ ...form, enrollmentYear: e.target.value })}
                           className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                         >
-                          <option value="1">研一</option>
-                          <option value="2">研二</option>
-                          <option value="3">研三</option>
+                          <option value="">未填写</option>
+                          {enrollmentYearOptions.map((year) => (
+                            <option key={year} value={year}>
+                              {year} 年
+                            </option>
+                          ))}
                         </select>
+                        {form.title === "MASTER" && form.enrollmentYear && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formGrade
+                              ? `当前显示为「${gradeLabels[formGrade]}」`
+                              : "该年份已超过 3 年学制，请把身份改为「已毕业」"}
+                          </p>
+                        )}
                       </div>
                     )}
                     <div className="flex gap-3">
@@ -369,7 +410,8 @@ export default function ProfilePage() {
                             name: profile.name || "",
                             studentId: profile.studentId || "",
                             title: profile.title || "MASTER",
-                            grade: profile.grade?.toString() || "1",
+                            enrollmentYear:
+                              (profile.enrollmentYear ?? profile.member?.enrollmentYear)?.toString() || "",
                           });
                         }}
                         className="px-4 py-2 border border-white/20 hover:bg-white/10 text-white rounded-lg transition-colors"
@@ -400,9 +442,9 @@ export default function ProfilePage() {
                       <span className="text-gray-400 w-20">身份</span>
                       <span>
                         {titleMap[profile.title || ""] || "-"}
-                        {profile.title === "MASTER" && profile.grade && (
+                        {profile.title === "MASTER" && (profile.member?.grade ?? profile.grade) && (
                           <span className="ml-2 text-gray-400">
-                            ({gradeMap[profile.grade] || `研${profile.grade}`})
+                            ({gradeMap[profile.member?.grade ?? profile.grade ?? 1] || ""})
                           </span>
                         )}
                       </span>
@@ -446,23 +488,90 @@ export default function ProfilePage() {
                           className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                         >
                           <option value="TEACHER">老师</option>
-                          <option value="MASTER">硕士生</option>
+                          <option value="MASTER">硕士生（在读）</option>
+                          <option value="ALUMNI">已毕业（校友）</option>
                         </select>
                       </div>
-                      {memberForm.title === "MASTER" && (
+                      {memberForm.title !== "TEACHER" && (
                         <div>
-                          <label className="block text-sm text-gray-400 mb-1">年级</label>
+                          <label className="block text-sm text-gray-400 mb-1">入学年份</label>
                           <select
-                            value={memberForm.grade}
-                            onChange={(e) => setMemberForm({ ...memberForm, grade: e.target.value })}
+                            value={memberForm.enrollmentYear}
+                            onChange={(e) =>
+                              setMemberForm({ ...memberForm, enrollmentYear: e.target.value })
+                            }
                             className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                           >
-                            <option value="1">研一</option>
-                            <option value="2">研二</option>
-                            <option value="3">研三</option>
+                            <option value="">未填写</option>
+                            {enrollmentYearOptions.map((year) => (
+                              <option key={year} value={year}>
+                                {year} 年
+                              </option>
+                            ))}
                           </select>
                         </div>
                       )}
+                      {/* 学籍信息（与成员档案同步的结构化字段） */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">学号/工号</label>
+                          <input
+                            type="text"
+                            value={profile.studentId || ""}
+                            disabled
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 cursor-not-allowed opacity-60"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            在「基本信息」中修改，保存后自动同步
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">手机号</label>
+                          <input
+                            type="text"
+                            value={memberForm.phone}
+                            onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">院系</label>
+                          <input
+                            type="text"
+                            value={memberForm.department}
+                            onChange={(e) => setMemberForm({ ...memberForm, department: e.target.value })}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-1">专业</label>
+                          <input
+                            type="text"
+                            value={memberForm.major}
+                            onChange={(e) => setMemberForm({ ...memberForm, major: e.target.value })}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-sm text-gray-400 mb-1">学生类别</label>
+                          <input
+                            type="text"
+                            value={memberForm.programType}
+                            onChange={(e) => setMemberForm({ ...memberForm, programType: e.target.value })}
+                            placeholder="如：全日制学术学位硕士"
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-sm text-gray-400 mb-1">论文题目</label>
+                          <input
+                            type="text"
+                            value={memberForm.thesisTitle}
+                            onChange={(e) => setMemberForm({ ...memberForm, thesisTitle: e.target.value })}
+                            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                          />
+                        </div>
+                      </div>
                       <div>
                         <label className="block text-sm text-gray-400 mb-1">研究方向</label>
                         <input
@@ -496,7 +605,13 @@ export default function ProfilePage() {
                             setEditingMember(false);
                             setMemberForm({
                               title: profile.member?.title || profile.title || "MASTER",
-                              grade: (profile.member?.grade || profile.grade)?.toString() || "1",
+                              enrollmentYear:
+                                (profile.member?.enrollmentYear ?? profile.enrollmentYear)?.toString() || "",
+                              phone: profile.member?.phone || "",
+                              department: profile.member?.department || "",
+                              major: profile.member?.major || "",
+                              programType: profile.member?.programType || "",
+                              thesisTitle: profile.member?.thesisTitle || "",
                               researchDirection: profile.member?.researchDirection || "",
                               bio: profile.member?.bio || "",
                             });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { enrollmentYearFromGrade } from "@/lib/member-grade";
+import { deriveMemberStudyFields } from "@/lib/member-grade";
 
 // PUT /api/users/[id] - 更新用户信息（审核、角色分配）
 export async function PUT(
@@ -49,18 +49,23 @@ export async function PUT(
 
     // 如果状态变为通过，且没有成员记录，则自动创建
     if (status === "APPROVED" && !targetUser.member) {
-      const memberTitle = targetUser.title || "MASTER";
-      
+      // 按入学年份自动判定身份：超过学制直接记为「已毕业」
+      const study = deriveMemberStudyFields({
+        title: targetUser.title,
+        grade: targetUser.grade,
+        enrollmentYear: targetUser.enrollmentYear,
+      });
+
       await prisma.member.create({
         data: {
           userId: id,
           name: targetUser.name,
-          title: memberTitle,
-          grade: memberTitle === "MASTER" ? targetUser.grade : null,
-          enrollmentYear:
-            memberTitle === "MASTER" ? enrollmentYearFromGrade(targetUser.grade) : null,
+          title: study.title,
+          grade: study.grade,
+          enrollmentYear: study.enrollmentYear,
+          studentNo: targetUser.studentId || null,
           email: targetUser.email,
-          displayOrder: memberTitle === "TEACHER" ? 0 : (targetUser.grade || 1) * 10,
+          displayOrder: study.title === "TEACHER" ? 0 : (study.grade || 1) * 10,
         },
       });
     }

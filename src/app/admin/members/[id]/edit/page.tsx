@@ -16,6 +16,12 @@ export default function EditMemberPage() {
     name: "",
     title: "MASTER",
     enrollmentYear: "",
+    studentNo: "",
+    phone: "",
+    department: "",
+    major: "",
+    programType: "",
+    thesisTitle: "",
     researchDirection: "",
     bio: "",
     email: "",
@@ -34,6 +40,12 @@ export default function EditMemberPage() {
             name: data.name || "",
             title: data.title || "MASTER",
             enrollmentYear: data.enrollmentYear?.toString() || "",
+            studentNo: data.studentNo || "",
+            phone: data.phone || "",
+            department: data.department || "",
+            major: data.major || "",
+            programType: data.programType || "",
+            thesisTitle: data.thesisTitle || "",
             researchDirection: data.researchDirection || "",
             bio: data.bio || "",
             email: data.email || "",
@@ -160,6 +172,80 @@ export default function EditMemberPage() {
               <p className="mt-2 text-xs text-gray-500">{gradeHint}</p>
             </div>
           )}
+
+          {/* 学籍信息（从 bio 中拆出的结构化字段，也用于和注册账号同步） */}
+          <div className="border-t border-white/10 pt-6">
+            <h2 className="text-sm font-semibold text-gray-200 mb-4">学籍信息</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  学号/工号
+                </label>
+                <input
+                  type="text"
+                  value={form.studentNo}
+                  onChange={(e) => setForm({ ...form, studentNo: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  手机号
+                </label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  院系
+                </label>
+                <input
+                  type="text"
+                  value={form.department}
+                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  专业
+                </label>
+                <input
+                  type="text"
+                  value={form.major}
+                  onChange={(e) => setForm({ ...form, major: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  学生类别
+                </label>
+                <input
+                  type="text"
+                  value={form.programType}
+                  onChange={(e) => setForm({ ...form, programType: e.target.value })}
+                  placeholder="如：全日制学术学位硕士"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  论文题目
+                </label>
+                <input
+                  type="text"
+                  value={form.thesisTitle}
+                  onChange={(e) => setForm({ ...form, thesisTitle: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                />
+              </div>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">

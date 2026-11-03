@@ -22,6 +22,7 @@ model User {
   status         UserStatus @default(PENDING)   // 注册审核状态
   title          MemberTitle?  // 注册时选择的身份
   grade          Int?         // 年级（仅硕士生）
+  enrollmentYear Int?         @map("enrollment_year") // 注册时填写的入学年份，年级由它推算
   avatarUrl      String?   @map("avatar_url")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
@@ -57,6 +58,12 @@ model Member {
   title             MemberTitle
   grade             Int?      // 年级：1=研一, 2=研二, 3=研三（仅硕士生）
   enrollmentYear    Int?      @map("enrollment_year") // 入学年份（如 2024），年级由它按学年推算
+  studentNo         String?   @map("student_no")      // 学号（从 bio 中拆出）
+  phone             String?                            // 手机号（从 bio 中拆出）
+  department        String?                            // 院系（从 bio 中拆出）
+  major             String?                            // 专业（从 bio 中拆出）
+  programType       String?   @map("program_type")     // 学生类别（从 bio 中拆出）
+  thesisTitle       String?   @map("thesis_title")     // 论文题目（从 bio 中拆出）
   researchDirection String?   @map("research_direction")
   bio               String?   @db.Text
   email             String?
@@ -157,7 +164,7 @@ model Award {
   id            String    @id @default(cuid())
   name          String                // 获奖名称
   competition   String                // 赛事/评奖机构
-  level         AwardLevel            // 获奖等级
+  category      AwardCategory @default(RESEARCH) @map("category") // 获奖分类
   winners       String                // 获奖成员（逗号分隔）
   year          Int
   description   String?   @db.Text
@@ -173,6 +180,14 @@ model Award {
   @@map("awards")
 }
 
+enum AwardCategory {
+  RESEARCH     // 科研获奖
+  TEACHING     // 教学获奖
+  COMPETITION  // 竞赛获奖
+  ACADEMIC     // 学业获奖
+}
+
+// 仅供存档的 competitions 表使用（竞赛模块已下线）
 enum AwardLevel {
   NATIONAL_FIRST     // 国家级一等奖
   NATIONAL_SECOND    // 国家级二等奖

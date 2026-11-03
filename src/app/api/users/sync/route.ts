@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { enrollmentYearFromGrade } from "@/lib/member-grade";
+import { deriveMemberStudyFields } from "@/lib/member-grade";
 
 // POST /api/users/sync - 同步用户和成员数据
 export async function POST() {
@@ -39,25 +39,34 @@ export async function POST() {
       });
 
       if (existingMember) {
-        // 关联已有成员
+        // 关联已有成员，顺手补上空着的学号
         await prisma.member.update({
           where: { id: existingMember.id },
-          data: { userId: user.id },
+          data: {
+            userId: user.id,
+            ...(existingMember.studentNo || !user.studentId
+              ? {}
+              : { studentNo: user.studentId }),
+          },
         });
         linked++;
       } else {
-        // 创建新成员
-        const memberTitle = user.title || "MASTER";
+        // 创建新成员（按入学年份自动判定身份，超过学制记为「已毕业」）
+        const study = deriveMemberStudyFields({
+          title: user.title,
+          grade: user.grade,
+          enrollmentYear: user.enrollmentYear,
+        });
         await prisma.member.create({
           data: {
             userId: user.id,
             name: user.name,
-            title: memberTitle,
-            grade: memberTitle === "MASTER" ? user.grade : null,
-            enrollmentYear:
-              memberTitle === "MASTER" ? enrollmentYearFromGrade(user.grade) : null,
+            title: study.title,
+            grade: study.grade,
+            enrollmentYear: study.enrollmentYear,
+            studentNo: user.studentId || null,
             email: user.email,
-            displayOrder: memberTitle === "TEACHER" ? 0 : (user.grade || 1) * 10,
+            displayOrder: study.title === "TEACHER" ? 0 : (study.grade || 1) * 10,
           },
         });
         created++;

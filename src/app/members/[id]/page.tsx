@@ -7,11 +7,20 @@ import Link from "next/link";
 import { ArrowLeft, Mail, BookOpen } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { gradeLabels } from "@/lib/member-grade";
 
 interface Member {
   id: string;
   name: string;
   title: string;
+  grade: number | null;
+  enrollmentYear: number | null;
+  studentNo: string | null;
+  phone: string | null;
+  department: string | null;
+  major: string | null;
+  programType: string | null;
+  thesisTitle: string | null;
   researchDirection: string | null;
   bio: string | null;
   email: string | null;
@@ -124,6 +133,9 @@ export default function MemberDetailPage() {
                   <h1 className="text-3xl font-bold mb-2">{member.name}</h1>
                   <p className="text-blue-400 text-lg mb-4">
                     {titleMap[member.title] || member.title}
+                    {member.title === "MASTER" && member.grade
+                      ? `（${gradeLabels[member.grade]}）`
+                      : ""}
                   </p>
                   <p className="text-gray-300 mb-4">
                     {member.researchDirection}
@@ -141,8 +153,61 @@ export default function MemberDetailPage() {
               </div>
             </div>
 
-            {/* Bio */}
-            {member.bio && (
+            {/* 学籍信息：由 bio 拆出的结构化字段 */}
+            {(member.department ||
+              member.major ||
+              member.programType ||
+              member.studentNo ||
+              member.enrollmentYear ||
+              member.thesisTitle) && (
+              <div className="glass-card p-8 mb-8">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-cyan-400" />
+                  学籍信息
+                </h2>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                  {member.department && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500 shrink-0">院系</dt>
+                      <dd className="text-gray-300">{member.department}</dd>
+                    </div>
+                  )}
+                  {member.major && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500 shrink-0">专业</dt>
+                      <dd className="text-gray-300">{member.major}</dd>
+                    </div>
+                  )}
+                  {member.programType && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500 shrink-0">学生类别</dt>
+                      <dd className="text-gray-300">{member.programType}</dd>
+                    </div>
+                  )}
+                  {member.enrollmentYear && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500 shrink-0">入学年份</dt>
+                      <dd className="text-gray-300">{member.enrollmentYear} 年</dd>
+                    </div>
+                  )}
+                  {member.studentNo && (
+                    <div className="flex gap-2">
+                      <dt className="text-gray-500 shrink-0">学号</dt>
+                      <dd className="text-gray-300">{member.studentNo}</dd>
+                    </div>
+                  )}
+                  {member.thesisTitle && (
+                    <div className="flex gap-2 sm:col-span-2">
+                      <dt className="text-gray-500 shrink-0">论文题目</dt>
+                      <dd className="text-gray-300">{member.thesisTitle}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            )}
+
+            {/* Bio：字段拆分后，纯档案格式的旧文本不再重复展示 */}
+            {member.bio && !/^院系[：:]/.test(member.bio.trim()) && (
               <div className="glass-card p-8 mb-8">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-blue-400" />

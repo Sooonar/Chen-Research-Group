@@ -11,11 +11,15 @@ const navItems = [
   { label: "团队成员", href: "/members" },
   { label: "科研成果", href: "/publications" },
   { label: "科研项目", href: "/projects" },
-  { label: "获奖", href: "/publications?tab=awards" },
-  { label: "竞赛", href: "/competitions" },
+  { label: "获奖", href: "/awards" },
   { label: "新闻动态", href: "/news" },
   { label: "算法资源", href: "/algorithms" },
 ];
+
+// 各模块仅登录后可见；未登录时只展示首页。
+function visibleNavItems(loggedIn: boolean) {
+  return loggedIn ? navItems : navItems.filter((item) => item.href === "/");
+}
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -39,7 +43,7 @@ export function Navbar() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
+            {visibleNavItems(Boolean(session)).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -96,7 +100,7 @@ export function Navbar() {
         {/* Mobile nav */}
         {isOpen && (
           <div className="md:hidden py-4 space-y-2">
-            {navItems.map((item) => (
+            {visibleNavItems(Boolean(session)).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { AWARD_CATEGORIES, awardCategoryLabels } from "@/lib/award-category";
 
 export default function NewAwardPage() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function NewAwardPage() {
   const [form, setForm] = useState({
     name: "",
     competition: "",
-    level: "OTHER",
+    category: "RESEARCH",
     winners: "",
     year: new Date().getFullYear().toString(),
     description: "",
@@ -58,6 +59,23 @@ export default function NewAwardPage() {
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
+              获奖分类 <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+            >
+              {AWARD_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {awardCategoryLabels[category]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               获奖名称 <span className="text-red-400">*</span>
             </label>
             <input
@@ -84,37 +102,17 @@ export default function NewAwardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                获奖等级 <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={form.level}
-                onChange={(e) => setForm({ ...form, level: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-              >
-                <option value="NATIONAL_FIRST">国家级一等奖</option>
-                <option value="NATIONAL_SECOND">国家级二等奖</option>
-                <option value="NATIONAL_THIRD">国家级三等奖</option>
-                <option value="PROVINCIAL_FIRST">省部级一等奖</option>
-                <option value="PROVINCIAL_SECOND">省部级二等奖</option>
-                <option value="PROVINCIAL_THIRD">省部级三等奖</option>
-                <option value="OTHER">其他</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                获奖年份 <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="number"
-                value={form.year}
-                onChange={(e) => setForm({ ...form, year: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              获奖年份 <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="number"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              required
+            />
           </div>
 
           <div>

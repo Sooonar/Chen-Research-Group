@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import {
+  deriveGrade,
+  enrollmentYearFromGrade,
+  getAcademicYear,
+  MAX_FUTURE_ENROLLMENT_YEARS,
+  MIN_ENROLLMENT_YEAR,
+  resolveTitleForEnrollment,
+  toIntOrNull,
+  type MemberTitleLike,
+} from "@/lib/member-grade";
 
 // 简单的内存速率限制（生产环境建议使用Redis）
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
@@ -62,7 +72,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    let { name, email, password, studentId, title, grade } = body;
+    // 需要清洗的字段用 let，其余只读
+    let { name, email, studentId } = body;
+    const { password, title, grade, enrollmentYear } = body;
 
     // 验证必填项
     if (!name || !email || !password) {
@@ -109,8 +121,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 验证身份类型
-    const validTitles = ["TEACHER", "MASTER"];
+    // 验证身份类型（已毕业校友也可以自己注册）
+    const validTitles = ["TEACHER", "MASTER", "ALUMNI"];
     if (title && !validTitles.includes(title)) {
       return NextResponse.json(
         { error: "身份类型无效" },
@@ -118,15 +130,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // 验证年级
-    if (title === "MASTER" && grade) {
-      const gradeNum = parseInt(grade.toString());
-      if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 3) {
+    // 按「入学年份」登记，年级由后台按学年自动推算，不再让用户手选「研几」
+    let finalGrade: number | null = toIntOrNull(grade);
+    let finalEnrollmentYear: number | null = toIntOrNull(enrollmentYear);
+    let finalTitle = (title as MemberTitleLike | undefined) || "MASTER";
+    const currentAcademicYear = getAcademicYear();
+
+    if (finalTitle === "TEACHER") {
+      finalGrade = null;
+      finalEnrollmentYear = null;
+    } else {
+      // 兼容只传 grade 的旧客户端
+      if (finalEnrollmentYear === null && finalGrade !== null) {
+        finalEnrollmentYear = enrollmentYearFromGrade(finalGrade);
+      }
+      if (finalEnrollmentYear !== null && finalEnrollmentYear < MIN_ENROLLMENT_YEAR) {
         return NextResponse.json(
-          { error: "年级必须是1-3之间的数字" },
+          { error: `入学年份不能早于 ${MIN_ENROLLMENT_YEAR} 年` },
           { status: 400 }
         );
       }
+      if (finalEnrollmentYear !== null && finalEnrollmentYear > currentAcademicYear + MAX_FUTURE_ENROLLMENT_YEARS) {
+        return NextResponse.json(
+          { error: `入学年份最多可选到 ${currentAcademicYear + MAX_FUTURE_ENROLLMENT_YEARS} 年` },
+          { status: 400 }
+        );
+      }
+
+      if (finalTitle === "MASTER" && finalEnrollmentYear === null) {
+        return NextResponse.json({ error: "请选择入学年份" }, { status: 400 });
+      }
+      // 按入学年份自动判定：超过 3 年学制直接记为「已毕业」，未来年份记为「预入学」
+      finalTitle = resolveTitleForEnrollment(finalTitle, finalEnrollmentYear);
+      finalGrade = finalTitle === "MASTER" ? deriveGrade(finalEnrollmentYear) : null;
     }
 
     // 检查邮箱是否已注册
@@ -151,8 +187,9 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         studentId: studentId || null,
-        title: title || "MASTER",
-        grade: grade ? parseInt(grade.toString()) : null,
+        title: finalTitle,
+        grade: finalGrade,
+        enrollmentYear: finalEnrollmentYear,
         status: "PENDING",
         role: "MEMBER",
       },

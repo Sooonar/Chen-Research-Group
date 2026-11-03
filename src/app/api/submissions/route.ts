@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { toAwardCategory } from "@/lib/award-category";
 
 // GET /api/submissions - 获取提交列表
 export async function GET(request: Request) {
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
           data: {
             name: data.name,
             competition: data.competition,
-            level: data.level,
+            category: toAwardCategory(data.category),
             winners: data.winners,
             year: parseInt(data.year),
             description: data.description || null,

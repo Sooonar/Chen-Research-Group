@@ -16,6 +16,7 @@
 /tmp
 /.codex-tmp-deps
 /.workbuddy
+/.zcode
 
 # next.js
 /.next/

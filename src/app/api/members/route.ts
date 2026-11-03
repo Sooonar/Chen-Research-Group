@@ -8,8 +8,7 @@ import {
   toPageResult,
 } from "@/lib/pagination";
 import {
-  deriveGrade,
-  enrollmentYearFromGrade,
+  buildStudyPatch,
   resolveMemberGrade,
   withComputedGrade,
 } from "@/lib/member-grade";
@@ -140,17 +139,26 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, title, grade, enrollmentYear, researchDirection, bio, email, displayOrder } =
-      body;
+    const {
+      name,
+      title,
+      grade,
+      enrollmentYear,
+      studentNo,
+      phone,
+      department,
+      major,
+      programType,
+      thesisTitle,
+      researchDirection,
+      bio,
+      email,
+      displayOrder,
+    } = body;
 
-    // 入学年份优先；只给了年级时反推入学年份，两个字段保持同步
-    const parsedEnrollmentYear = enrollmentYear ? parseInt(enrollmentYear.toString()) : null;
-    const parsedGrade = grade ? parseInt(grade.toString()) : null;
-    const finalEnrollmentYear =
-      parsedEnrollmentYear ?? enrollmentYearFromGrade(parsedGrade);
-    const finalGrade = parsedEnrollmentYear
-      ? deriveGrade(parsedEnrollmentYear)
-      : parsedGrade;
+    // 年级由入学年份推算；只给了年级时反推入学年份，两个字段保持同步
+    const { grade: finalGrade = null, enrollmentYear: finalEnrollmentYear = null } =
+      buildStudyPatch({ title, grade, enrollmentYear });
 
     const member = await prisma.member.create({
       data: {
@@ -158,6 +166,12 @@ export async function POST(request: Request) {
         title,
         grade: finalGrade,
         enrollmentYear: finalEnrollmentYear,
+        studentNo: studentNo || null,
+        phone: phone || null,
+        department: department || null,
+        major: major || null,
+        programType: programType || null,
+        thesisTitle: thesisTitle || null,
         researchDirection,
         bio,
         email,
@@ -165,7 +179,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(member, { status: 201 });
+    return NextResponse.json(withComputedGrade(member), { status: 201 });
   } catch (error) {
     console.error("Error creating member:", error);
     return NextResponse.json({ error: "创建成员失败" }, { status: 500 });

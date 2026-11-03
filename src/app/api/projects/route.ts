@@ -10,12 +10,6 @@ const include = {
   progress: {
     orderBy: { progressDate: "desc" },
   },
-  competitions: {
-    include: {
-      award: { select: { id: true, name: true, level: true } },
-    },
-    orderBy: [{ year: "desc" }, { createdAt: "desc" }],
-  },
 } satisfies Prisma.ProjectInclude;
 
 const orderBy: Prisma.ProjectOrderByWithRelationInput = { createdAt: "desc" };
