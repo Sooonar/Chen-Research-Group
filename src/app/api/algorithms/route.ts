@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 
 // GET /api/algorithms
 export async function GET() {
@@ -16,6 +18,10 @@ export async function GET() {
 
 // POST /api/algorithms
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const { name, description, useCases, readmeContent } = body;
@@ -27,6 +33,16 @@ export async function POST(request: Request) {
         useCases,
         readmeContent,
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "algorithm",
+      targetId: algorithm.id,
+      targetLabel: algorithm.name,
+      summary: describeLog("CREATE", "algorithm", algorithm.name),
     });
 
     return NextResponse.json(algorithm, { status: 201 });

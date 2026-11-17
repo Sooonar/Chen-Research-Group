@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 import {
   clampPage,
   getTotalPages,
@@ -74,6 +76,10 @@ export async function GET(request: Request) {
 
 // POST /api/copyrights
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const { name, registrationNumber, version, registrationDate } = body;
@@ -85,6 +91,16 @@ export async function POST(request: Request) {
         version,
         registrationDate: registrationDate ? new Date(registrationDate) : null,
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "copyright",
+      targetId: copyright.id,
+      targetLabel: copyright.name,
+      summary: describeLog("CREATE", "copyright", copyright.name),
     });
 
     return NextResponse.json(copyright, { status: 201 });

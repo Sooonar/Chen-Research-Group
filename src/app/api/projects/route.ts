@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 import { clampPage, getTotalPages, parsePagination, toPageResult } from "@/lib/pagination";
 
 const include = {
@@ -55,6 +57,10 @@ export async function GET(request: Request) {
 
 // POST /api/projects
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const {
@@ -92,6 +98,16 @@ export async function POST(request: Request) {
           include: { member: true },
         },
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "project",
+      targetId: project.id,
+      targetLabel: project.name,
+      summary: describeLog("CREATE", "project", project.name),
     });
 
     return NextResponse.json(project, { status: 201 });

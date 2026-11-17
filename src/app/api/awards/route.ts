@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth-options";
 import { toAwardCategory } from "@/lib/award-category";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 import {
   clampPage,
   getTotalPages,
@@ -176,6 +178,10 @@ export async function GET(request: Request) {
 
 // POST /api/awards
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const { name, competition, category, winners, year, description, imageUrl } = body;
@@ -190,6 +196,16 @@ export async function POST(request: Request) {
         description,
         imageUrl,
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "award",
+      targetId: award.id,
+      targetLabel: award.name,
+      summary: describeLog("CREATE", "award", award.name),
     });
 
     return NextResponse.json(award, { status: 201 });

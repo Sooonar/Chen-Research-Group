@@ -12,6 +12,8 @@ import {
   resolveMemberGrade,
   withComputedGrade,
 } from "@/lib/member-grade";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 
 // 成员排序权重：老师 > 研三 > 研二 > 研一
 const titleOrder: Record<string, number> = {
@@ -137,6 +139,10 @@ export async function GET(request: Request) {
 
 // POST /api/members - 创建成员
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const {
@@ -177,6 +183,16 @@ export async function POST(request: Request) {
         email,
         displayOrder: displayOrder || 0,
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "member",
+      targetId: member.id,
+      targetLabel: member.name,
+      summary: describeLog("CREATE", "member", member.name),
     });
 
     return NextResponse.json(withComputedGrade(member), { status: 201 });

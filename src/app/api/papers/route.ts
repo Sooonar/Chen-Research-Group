@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/api-auth";
+import { describeLog, writeLog } from "@/lib/audit";
 import {
   clampPage,
   getTotalPages,
@@ -66,6 +68,10 @@ export async function GET(request: Request) {
 
 // POST /api/papers - 创建论文
 export async function POST(request: Request) {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard.response;
+  const actor = guard.user;
+
   try {
     const body = await request.json();
     const { title, authors, journal, year, doi, abstract } = body;
@@ -79,6 +85,16 @@ export async function POST(request: Request) {
         doi,
         abstract,
       },
+    });
+
+    await writeLog({
+      request,
+      actor,
+      action: "CREATE",
+      module: "paper",
+      targetId: paper.id,
+      targetLabel: paper.title,
+      summary: describeLog("CREATE", "paper", paper.title),
     });
 
     return NextResponse.json(paper, { status: 201 });

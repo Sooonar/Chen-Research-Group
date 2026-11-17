@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { toAwardCategory } from "@/lib/award-category";
+import { writeLog } from "@/lib/audit";
+import { achievementTypeLabels } from "@/lib/log-labels";
 
 // GET /api/submissions - 获取提交列表
 export async function GET(request: Request) {
@@ -24,7 +27,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const userId = searchParams.get("userId");
 
-    const where: any = {};
+    const where: Prisma.AchievementWhereInput = {};
 
     // 管理员可以查看所有提交，普通用户只能查看自己的
     if (currentUser.role !== "SUPER_ADMIN" && currentUser.role !== "ADMIN") {
@@ -33,7 +36,7 @@ export async function GET(request: Request) {
       where.userId = userId;
     }
 
-    if (status) where.status = status;
+    if (status) where.status = status as Prisma.AchievementWhereInput["status"];
 
     const submissions = await prisma.achievement.findMany({
       where,
@@ -165,6 +168,27 @@ export async function POST(request: Request) {
           },
         },
       },
+    });
+
+    const typeLabel = achievementTypeLabels[type] ?? "成果";
+    const targetLabel = data.title || data.name || "";
+    await writeLog({
+      request,
+      actor: {
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+      },
+      action: "CREATE",
+      module: "submission",
+      targetId: submission.id,
+      targetLabel,
+      summary: `提交${typeLabel}「${targetLabel}」，等待审核`,
+      changes: [
+        { field: "status", label: "审核状态", before: "", after: "待审核" },
+      ],
+      detail: JSON.stringify({ type, targetId }),
     });
 
     return NextResponse.json(submission, { status: 201 });

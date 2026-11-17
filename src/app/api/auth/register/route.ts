@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { writeLog } from "@/lib/audit";
 import {
   deriveGrade,
   enrollmentYearFromGrade,
@@ -195,6 +196,25 @@ export async function POST(request: Request) {
       },
     });
 
+    await writeLog({
+      request,
+      actor: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      action: "CREATE",
+      module: "user",
+      targetId: user.id,
+      targetLabel: user.name,
+      summary: `新用户注册「${user.name}」，待审核`,
+      changes: [
+        { field: "status", label: "账号状态", before: "", after: "待审核" },
+      ],
+      detail: user.email,
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -202,8 +222,7 @@ export async function POST(request: Request) {
         userId: user.id,
       },
       { status: 201 }
-    );
-  } catch (error) {
+    );  } catch (error) {
     console.error("Error registering user:", error);
     return NextResponse.json({ error: "注册失败" }, { status: 500 });
   }

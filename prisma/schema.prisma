@@ -428,16 +428,27 @@ model SiteSetting {
 // ==================== 操作日志 ====================
 
 model OperationLog {
-  id        String   @id @default(cuid())
-  userId    String?  @map("user_id")
-  action    String                 // 操作类型：CREATE, UPDATE, DELETE
-  module    String                 // 模块：member, publication, patent 等
-  targetId  String?  @map("target_id")
-  detail    String?  @db.Text      // 操作详情
-  ip        String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  // 操作人快照：用户被删除后外键会置空，靠这三个字段仍能追溯到是谁做的
+  userName    String?  @map("user_name")
+  userEmail   String?  @map("user_email")
+  userRole    String?  @map("user_role")
+  action      String                 // 操作类型：CREATE, UPDATE, DELETE, REVIEW, LOGIN
+  module      String                 // 模块：paper, patent, project 等，见 src/lib/audit-meta.ts
+  targetId    String?  @map("target_id")
+  targetLabel String?  @map("target_label") // 操作对象名称快照（论文标题、项目名等）
+  summary     String   @db.Text      // 一句话中文描述，列表直接展示
+  changes     String?  @db.Text      // 字段级变更 JSON：[{ field, label, before, after }]
+  detail      String?  @db.Text      // 附加说明（如审核意见、来源 IP 之外的上下文）
+  ip          String?
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([module, createdAt])
   @@map("operation_logs")
 }

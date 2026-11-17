@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { deriveMemberStudyFields } from "@/lib/member-grade";
+import { writeLog } from "@/lib/audit";
 
 // POST /api/users/sync - 同步用户和成员数据
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const session = await getServerSession();
 
@@ -96,6 +97,21 @@ export async function POST() {
         }
       }
     }
+
+    await writeLog({
+      request,
+      actor: {
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+      },
+      action: "UPDATE",
+      module: "member",
+      targetLabel: "成员数据同步",
+      summary: `同步用户与成员数据：新建 ${created} 个成员，关联 ${linked} 个成员`,
+      detail: `created=${created}, linked=${linked}`,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,10 +1,20 @@
 "use client";
 
+import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
-import { Users, FileText, Award, Code, FileCode, Settings, LogOut, Newspaper, FolderOpen, Trophy, UserCog, ClipboardCheck } from "lucide-react";
+import { Users, FileText, Award, Code, FileCode, Settings, LogOut, Newspaper, FolderOpen, Trophy, UserCog, ClipboardCheck, ScrollText } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const adminMenus = [
+interface AdminMenu {
+  label: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  description: string;
+  /** 仅超级管理员可见的入口（服务端还有一层权限校验）。 */
+  superAdminOnly?: boolean;
+}
+
+const adminMenus: AdminMenu[] = [
   { label: "用户审核", href: "/admin/users", icon: UserCog, description: "审核注册用户，分配角色权限" },
   { label: "成果审核", href: "/admin/submissions", icon: ClipboardCheck, description: "审核用户提交的论文、专利、软著和获奖" },
   { label: "成员管理", href: "/admin/members", icon: Users, description: "管理团队成员信息" },
@@ -16,10 +26,30 @@ const adminMenus = [
   { label: "新闻管理", href: "/admin/news", icon: Newspaper, description: "管理新闻动态" },
   { label: "算法资源", href: "/admin/algorithms", icon: FileCode, description: "管理算法资源" },
   { label: "网站设置", href: "/admin/settings", icon: Settings, description: "首页内容编辑" },
+  { label: "操作日志", href: "/admin/logs", icon: ScrollText, description: "查看管理员的新增、修改、删除记录", superAdminOnly: true },
 ];
 
 export default function AdminPage() {
   const router = useRouter();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // 操作日志入口只对超级管理员展示；页面和接口仍有独立的权限校验
+  useEffect(() => {
+    let active = true;
+    fetch("/api/user/profile", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (active && data?.role === "SUPER_ADMIN") setIsSuperAdmin(true);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visibleMenus = adminMenus.filter(
+    (menu) => !menu.superAdminOnly || isSuperAdmin
+  );
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -52,7 +82,7 @@ export default function AdminPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {adminMenus.map((menu) => (
+          {visibleMenus.map((menu) => (
             <Link key={menu.href} href={menu.href}>
               <div className="glass-card p-6 hover:bg-white/5 transition-colors cursor-pointer group h-full">
                 <div className="flex items-start gap-4">

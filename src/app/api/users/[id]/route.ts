@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { deriveMemberStudyFields } from "@/lib/member-grade";
+import { diffRecord, labelOf, writeLog } from "@/lib/audit";
+import { roleLabels, userStatusLabels } from "@/lib/log-labels";
+
+const userFieldLabels = {
+  status: "账号状态",
+  role: "角色",
+};
+
+const userFormatters = {
+  status: (value: unknown) => labelOf(userStatusLabels, value),
+  role: (value: unknown) => labelOf(roleLabels, value),
+};
 
 // PUT /api/users/[id] - 更新用户信息（审核、角色分配）
 export async function PUT(
@@ -43,11 +56,12 @@ export async function PUT(
       return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
-    const updateData: any = {};
-    if (status) updateData.status = status;
-    if (role) updateData.role = role;
+    const updateData: Prisma.UserUpdateInput = {};
+    if (status) updateData.status = status as Prisma.UserUpdateInput["status"];
+    if (role) updateData.role = role as Prisma.UserUpdateInput["role"];
 
     // 如果状态变为通过，且没有成员记录，则自动创建
+    let createdMember = false;
     if (status === "APPROVED" && !targetUser.member) {
       // 按入学年份自动判定身份：超过学制直接记为「已毕业」
       const study = deriveMemberStudyFields({
@@ -68,6 +82,7 @@ export async function PUT(
           displayOrder: study.title === "TEACHER" ? 0 : (study.grade || 1) * 10,
         },
       });
+      createdMember = true;
     }
 
     const user = await prisma.user.update({
@@ -86,6 +101,40 @@ export async function PUT(
         updatedAt: true,
       },
     });
+
+    const changes = diffRecord(targetUser, user, userFieldLabels, userFormatters);
+    if (changes.length > 0 || createdMember) {
+      const parts: string[] = [];
+      if (targetUser.status !== user.status) {
+        parts.push(
+          user.status === "APPROVED"
+            ? `审核通过用户「${user.name}」`
+            : user.status === "REJECTED"
+              ? `拒绝用户「${user.name}」`
+              : `将用户「${user.name}」状态改为${labelOf(userStatusLabels, user.status)}`
+        );
+      }
+      if (targetUser.role !== user.role) {
+        parts.push(`将用户「${user.name}」角色改为${labelOf(roleLabels, user.role)}`);
+      }
+
+      await writeLog({
+        request,
+        actor: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          role: currentUser.role,
+        },
+        action: "UPDATE",
+        module: "user",
+        targetId: user.id,
+        targetLabel: user.name,
+        summary: parts.join("，并") || `修改用户「${user.name}」`,
+        changes,
+        detail: createdMember ? "审核通过时自动创建了成员记录" : null,
+      });
+    }
 
     return NextResponse.json(user);
   } catch (error) {
@@ -122,7 +171,31 @@ export async function DELETE(
       return NextResponse.json({ error: "不能删除自己" }, { status: 400 });
     }
 
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { name: true, email: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+    }
+
     await prisma.user.delete({ where: { id } });
+
+    await writeLog({
+      request,
+      actor: {
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+      },
+      action: "DELETE",
+      module: "user",
+      targetId: id,
+      targetLabel: target.name,
+      summary: `删除用户「${target.name}」`,
+      detail: target.email,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
