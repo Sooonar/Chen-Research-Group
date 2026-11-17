@@ -1,18 +1,41 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Lock } from "lucide-react";
 import Link from "next/link";
 
-/** 只允许站内相对路径，防开放重定向。 */
-function safeCallbackUrl(value: string | null): string {
-  if (value && value.startsWith("/") && !value.startsWith("//")) {
-    return value;
+/**
+ * 校验并归一化显式回跳地址，防开放重定向；无显式回跳时返回 null。
+ *
+ * 不能用 startsWith("//") 这类字符串判断：`/\evil.com`、`/\t/evil.com`
+ * 在浏览器解析 URL 时反斜杠等价于斜杠、制表符会被忽略，最终都会变成
+ * `//evil.com` 跳出站外。这里统一交给 URL 解析器判断同源。
+ */
+function resolveCallbackUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const target = new URL(value, window.location.origin);
+    if (target.origin !== window.location.origin) return null;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return null;
   }
-  return "/admin";
+}
+
+/** 无显式回跳地址时按角色决定落地页：普通成员去首页，管理员去后台。 */
+async function resolveLandingPath(): Promise<string> {
+  try {
+    const res = await fetch("/api/auth/session", { cache: "no-store" });
+    const data = await res.json();
+    const role = data?.user?.role;
+    if (role === "ADMIN" || role === "SUPER_ADMIN") return "/admin";
+  } catch {
+    // 会话读取失败时按普通成员处理
+  }
+  return "/";
 }
 
 function LoginContent() {
@@ -20,7 +43,6 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,11 +57,21 @@ function LoginContent() {
         redirect: false,
       });
 
-      if (result?.error) {
+      // signIn 的返回类型是 Promise<...| undefined>，undefined 不能当成成功
+      if (!result || result.error) {
         setError("邮箱或密码错误，或账号未通过审核");
-      } else {
-        router.push(safeCallbackUrl(searchParams.get("callbackUrl")));
+        return;
       }
+
+      // 必须整页跳转，不能用 router.push：
+      // 未登录时首页对受保护页面的 <Link> 预取会把中间件的 307（弹回登录页）
+      // 缓存进 Next.js 客户端路由缓存，登录成功后 router.push 命中这份陈旧
+      // 缓存，表现为“登录成功却跳回登录页/毫无反应”。整页导航携带新会话
+      // Cookie 且绕过客户端缓存，可彻底避免。
+      // 用 replace 而非 assign：登录页不留在历史记录里，后退不会回到登录表单。
+      const explicit = resolveCallbackUrl(searchParams.get("callbackUrl"));
+      const target = explicit ?? (await resolveLandingPath());
+      window.location.replace(target);
     } catch {
       setError("登录失败，请重试");
     } finally {

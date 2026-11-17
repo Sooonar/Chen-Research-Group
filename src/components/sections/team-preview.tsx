@@ -90,7 +90,9 @@ export function TeamPreview() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <Link href={`/members/${member.id}`}>
+                {/* 成员详情页需登录后可见：未登录时预取只会得到 307 并污染
+                    客户端路由缓存，因此关闭预取 */}
+                <Link href={`/members/${member.id}`} prefetch={false}>
                   <div className="glass-card p-6 hover:bg-white/5 transition-colors duration-200 cursor-pointer group">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-white">
                       {member.avatarUrl ? (
@@ -122,6 +124,7 @@ export function TeamPreview() {
         <div className="text-center">
           <Link
             href="/members"
+            prefetch={false}
             className="inline-flex items-center px-6 py-3 border border-white/20 hover:bg-white/10 text-white rounded-lg transition-colors duration-200"
           >
             查看全部成员

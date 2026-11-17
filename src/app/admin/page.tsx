@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { Users, FileText, Award, Code, FileCode, Settings, LogOut, Newspaper, FolderOpen, Trophy, UserCog, ClipboardCheck, ScrollText } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface AdminMenu {
   label: string;
@@ -30,7 +30,6 @@ const adminMenus: AdminMenu[] = [
 ];
 
 export default function AdminPage() {
-  const router = useRouter();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // 操作日志入口只对超级管理员展示；页面和接口仍有独立的权限校验
@@ -52,8 +51,9 @@ export default function AdminPage() {
   );
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/admin/login");
+    // 注意:必须是 NextAuth 的 signOut。之前调用的是不存在的 /api/auth/logout，
+    // 请求 404 且会话 Cookie 没被清除，导致后台“退出”实际从未注销。
+    await signOut({ callbackUrl: "/admin/login" });
   };
 
   return (
